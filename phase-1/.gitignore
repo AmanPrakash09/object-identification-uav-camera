@@ -3,3 +3,4 @@ coco-dataset/
 opencv-evaluation/venv/
 rfdetr-evaluation/venv/
 yolov12-evaluation/venv/
+phase-1/yolov12-evaluation/yolov12/
