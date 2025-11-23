@@ -1,3 +1,5 @@
 coco-env/
 coco-dataset/
 opencv-evaluation/venv/
+rfdetr-evaluation/venv/
+yolov12-evaluation/venv/
