@@ -4,3 +4,7 @@ opencv-evaluation/venv/
 rfdetr-evaluation/venv/
 yolov12-evaluation/venv/
 phase-1/yolov12-evaluation/yolov12/
+phase-1/rfdetr-evaluation/rf-detr-base.pth
+phase-1/rfdetr-evaluation/rf-detr-nano.pth
+phase-1/rfdetr-evaluation/rfdetr_trained.pth
+phase-1/rfdetr-evaluation/temp_rgb_image.jpg
