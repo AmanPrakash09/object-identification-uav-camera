@@ -1,0 +1,19 @@
+# Core scientific stack
+numpy
+pandas
+matplotlib
+tqdm
+
+# OpenCV for later visualization / inference
+opencv-python
+
+# Torch CPU version (GPU not needed on MacBook Air)
+torch
+torchvision
+
+# EfficientDet implementation
+effdet
+
+# Notebook support
+jupyter
+ipykernel
