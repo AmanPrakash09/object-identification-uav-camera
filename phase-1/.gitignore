@@ -1,9 +1,13 @@
 coco-env/
 coco-dataset/
 opencv-evaluation/venv/
-rfdetr-evaluation/venv/
+
 yolov12-evaluation/venv/
 yolov12-evaluation/yolov12/
+yolov12-evaluation/yolov12n.pt
+yolov12-evaluation/predictions_yolo12_jetson.json
+
+rfdetr-evaluation/venv/
 rfdetr-evaluation/rf-detr-base.pth
 rfdetr-evaluation/rf-detr-nano.pth
 rfdetr-evaluation/rfdetr_trained.pth
