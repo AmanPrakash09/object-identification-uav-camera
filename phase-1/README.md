@@ -20,7 +20,7 @@ pip install -r requirements.txt
 
 3. Run the script to get the dataset
 ```
-python get_coco_dataset.py
+python get-coco-dataset.py
 ```
 This script will:
 - Download COCO 2017 Train and Validation splits
