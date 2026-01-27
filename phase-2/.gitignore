@@ -1,0 +1,5 @@
+visdrone-dataset/train/
+visdrone-dataset/val/
+visdrone-dataset/test-dev/
+
+rfdetr/venv/

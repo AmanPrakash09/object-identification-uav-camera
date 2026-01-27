@@ -1,0 +1,55 @@
+# -------------------------
+# Core ML / PyTorch
+# -------------------------
+torch==2.2.2
+torchvision==0.17.2
+timm==1.0.22
+einops==0.8.1
+numpy==1.26.4
+scipy==1.13.0
+
+# -------------------------
+# RF-DETR + Transformers
+# -------------------------
+rfdetr==1.3.0
+transformers==4.57.1
+accelerate==1.12.0
+safetensors==0.4.3
+huggingface-hub==0.36.0
+
+# -------------------------
+# Dataset / Annotation / Augmentation
+# -------------------------
+pycocotools==2.0.7
+pillow==12.0.0
+opencv-python==4.9.0.80
+albumentations==2.0.4
+albucore==0.0.23
+
+# -------------------------
+# Evaluation / Metrics / Visualization
+# -------------------------
+matplotlib==3.10.7
+seaborn==0.13.2
+pandas==2.3.3
+scikit-learn==1.7.2
+tqdm==4.67.1
+
+# -------------------------
+# Performance / Profiling
+# -------------------------
+psutil==5.9.8
+
+# -------------------------
+# Jupyter / Notebook Environment
+# -------------------------
+jupyterlab==4.3.1
+ipykernel==6.29.5
+ipywidgets==8.1.8
+widgetsnbextension==4.0.15
+
+# -------------------------
+# Utilities
+# -------------------------
+pyyaml==6.0.1
+rich==14.2.0
