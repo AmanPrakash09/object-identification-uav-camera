@@ -11,3 +11,8 @@ rfdetr/logs/
 rfdetr/checkpoints/
 
 rfdetr/models/*.pth
+rfdetr/videos/VisDrone2019-VID-test-dev/
+rfdetr/videos/*.zip
+rfdetr/videos/uav0000009_03358_v/
+
+rfdetr/temp_frame.jpg
