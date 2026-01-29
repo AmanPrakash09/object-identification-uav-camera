@@ -9,3 +9,5 @@ rfdetr/rf-detr-nano.pth
 
 rfdetr/logs/
 rfdetr/checkpoints/
+
+rfdetr/models/*.pth
