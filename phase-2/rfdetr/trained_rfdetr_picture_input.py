@@ -13,7 +13,7 @@ REPO_DIR   = PHASE2_DIR.parent                        # .../object-identificatio
 
 # ---- CONFIG ----
 CKPT_PATH = SCRIPT_DIR / "models" / "visdrone_rfdetr_nano_best_ema.pth"
-IMAGE_PATH = PHASE2_DIR / "visdrone-dataset" / "test-dev" / "images" / "9999976_00000_d_0000024.jpg"    # random image for input
+IMAGE_PATH = PHASE2_DIR / "visdrone-dataset" / "test-dev" / "images" / "0000006_03636_d_0000009.jpg"    # random image for input
 THRESHOLD = 0.30
 
 # Phase-2 class names (must match training)
@@ -23,7 +23,7 @@ PHASE2_CLASSES = {
     3: "Car",
     4: "Truck",
     5: "Bus",
-    6: "Motorcycle",
+    6: "Other",
 }
 
 # ---- Checks ----
