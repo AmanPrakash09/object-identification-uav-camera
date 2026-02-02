@@ -16,3 +16,8 @@ rfdetr/videos/*.zip
 rfdetr/videos/uav0000009_03358_v/
 
 rfdetr/temp_frame.jpg
+
+jetson-nano/venv/
+jetson-nano/*.pth
+jetson-nano/example-images/*.jpg
+jetson-nano/example-outputs/
