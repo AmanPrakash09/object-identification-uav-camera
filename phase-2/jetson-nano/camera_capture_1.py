@@ -47,3 +47,6 @@ def show_camera():
                 break
     finally:
         cap.release()
+
+if __name__ == "__main__":
+    show_camera()
