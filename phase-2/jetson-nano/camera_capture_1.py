@@ -11,11 +11,11 @@ def gstreamer_pipeline(
 ):
     return (
         f"v4l2src device={device} ! "
-        f"video/x-bayer,format=bggr10,width={width},height={height},framerate={framerate}/1 ! "
+        f"video/x-bayer,format=rggb10,width={width},height={height},framerate={framerate}/1 ! "
         f"bayer2rgb ! "
         f"videoconvert ! "
         f"video/x-raw,format=BGR ! "
-        f"appsink drop=1 sync=false"
+        f"appsink drop=1 sync=false max-buffers=1"
     )
 
 # -----------------------------
@@ -23,12 +23,13 @@ def gstreamer_pipeline(
 # -----------------------------
 def show_camera():
     pipeline = gstreamer_pipeline()
+    print("Using pipeline:\n", pipeline)
 
     cap = cv2.VideoCapture(pipeline, cv2.CAP_GSTREAMER)
 
     if not cap.isOpened():
-        print("Error: Could not open camera pipeline")
-        print("Check Bayer format (bggr10 vs rggb10) if colors look wrong.")
+        print("Could not open camera.")
+        print("Try switching Bayer format between rggb10 and bggr10.")
         return
 
     print("Camera opened successfully. Press 'q' to exit.")
@@ -46,8 +47,3 @@ def show_camera():
                 break
     finally:
         cap.release()
-        cv2.destroyAllWindows()
-
-# -----------------------------
-if __name__ == "__main__":
-    show_camera()
