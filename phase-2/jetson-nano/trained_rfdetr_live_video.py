@@ -24,8 +24,15 @@ CKPT_PATH = SCRIPT_DIR / "visdrone_rfdetr_nano_best_ema.pth"
 assert CKPT_PATH.exists(), f"Missing checkpoint: {CKPT_PATH}"
 
 THRESHOLD = 0.30
-DETECT_EVERY_N = 5
-MIN_BOX_AREA = 24 * 24
+
+# Detect more often for smoother tracking (start here, then increase if stable)
+DETECT_EVERY_N = 2
+
+# Filter tiny boxes to reduce flicker
+MIN_BOX_AREA = 32 * 32
+
+# Keep drawing tracks for this many frames after last association (prevents blinking)
+DISPLAY_GRACE = 30  # ~0.5s at 60fps, ~1s at 30fps
 
 PHASE2_CLASSES = {
     1: "Human",
@@ -106,24 +113,36 @@ model = RFDETRNano(pretrain_weights=str(CKPT_PATH))
 model.model.model.to(device)
 model.model.model.eval()
 
+# Try to reduce latency spikes via optimization
+try:
+    model.optimize_for_inference()
+    print("Model optimized for inference.")
+except Exception:
+    # Not fatal if optimize_for_inference isn't available
+    pass
+
 
 # -----------------------------
 # ByteTrack (supervision)
 # -----------------------------
 tracker = sv.ByteTrack(
-    track_activation_threshold=THRESHOLD,
-    lost_track_buffer=30,
-    minimum_matching_threshold=0.7,
-    frame_rate=30
+    track_activation_threshold=0.25,   # slightly lower than detection threshold
+    lost_track_buffer=120,             # longer persistence between detections
+    minimum_matching_threshold=0.6,    # easier matching reduces flicker
+    frame_rate=60
 )
 
-track_meta = {}  # track_id -> (class_id, confidence)
+# Track metadata: track_id -> (class_id, confidence)
+track_meta = {}
+
+# Track last seen frame index: track_id -> frame_idx
+track_last_seen = {}
 
 
 def rfdetr_to_sv_detections(det, min_conf=0.30):
     xyxy = np.asarray(det.xyxy, dtype=np.float32)
     conf = np.asarray(det.confidence, dtype=np.float32)
-    cls  = np.asarray(det.class_id, dtype=np.int32)
+    cls = np.asarray(det.class_id, dtype=np.int32)
 
     keep = conf >= float(min_conf)
     return sv.Detections(xyxy=xyxy[keep], confidence=conf[keep], class_id=cls[keep])
@@ -140,8 +159,10 @@ def filter_small_boxes(dets: sv.Detections, min_area: int):
 def build_tensors_from_detections(dets: sv.Detections) -> np.ndarray:
     if len(dets) == 0:
         return np.zeros((0, 5), dtype=np.float32)
-    return np.hstack([dets.xyxy.astype(np.float32),
-                      dets.confidence.reshape(-1, 1).astype(np.float32)])
+    return np.hstack([
+        dets.xyxy.astype(np.float32),
+        dets.confidence.reshape(-1, 1).astype(np.float32),
+    ])
 
 
 def active_tracks_to_boxes_ids(tracker_obj):
@@ -182,7 +203,9 @@ def should_quit():
 # Main loop
 # -----------------------------
 def run_live():
-    W, H, FPS = 1280, 720, 30
+    # Argus logs showed 59.999 FPS at 1280x720
+    # Set FPS=60 so tracker timing matches reality
+    W, H, FPS = 1280, 720, 60
 
     cam = GstCamera(gstreamer_pipeline(sensor_id=0, width=W, height=H, framerate=FPS, flip_method=0))
     screen = init_display(W, H)
@@ -204,32 +227,44 @@ def run_live():
         if not ret:
             continue
 
-        # Update tracker every frame
+        # Run detector every N frames; update tracker only on detection frames
         if frame_idx % DETECT_EVERY_N == 0:
+            # Save temp frame for RFDETR.predict() (expects a path)
             Image.fromarray(frame_rgb).save(TEMP_FRAME_PATH, quality=90)
 
             det = model.predict(str(TEMP_FRAME_PATH), threshold=THRESHOLD)
+
             detections = rfdetr_to_sv_detections(det, min_conf=THRESHOLD)
             detections = filter_small_boxes(detections, MIN_BOX_AREA)
 
+            # Advance tracker using detection tensors
             _ = tracker.update_with_tensors(build_tensors_from_detections(detections))
 
+            # Get tracker ids associated to detections
             det_with_ids = tracker.update_with_detections(detections)
             if len(det_with_ids) > 0 and getattr(det_with_ids, "tracker_id", None) is not None:
                 for i in range(len(det_with_ids)):
                     tid = int(det_with_ids.tracker_id[i])
                     cls = int(det_with_ids.class_id[i])
                     conf = float(det_with_ids.confidence[i])
-                    track_meta[tid] = (cls, conf)
-        else:
-            _ = tracker.update_with_tensors(np.zeros((0, 5), dtype=np.float32))
 
-        # Draw active tracks using PIL
+                    track_meta[tid] = (cls, conf)
+                    track_last_seen[tid] = frame_idx
+        else:
+            # IMPORTANT: do NOT feed empty detections each frame --> causes flicker/decay
+            pass
+
+        # Draw active tracks using PIL (with persistence grace)
         img = Image.fromarray(frame_rgb)
         draw = ImageDraw.Draw(img)
 
         boxes, ids = active_tracks_to_boxes_ids(tracker)
         for box, tid in zip(boxes, ids):
+            # Only draw if recently seen (prevents blinking)
+            last = track_last_seen.get(tid, -10**9)
+            if frame_idx - last > DISPLAY_GRACE:
+                continue
+
             x1, y1, x2, y2 = box.astype(int).tolist()
             cls, conf = track_meta.get(tid, (-1, 0.0))
             label = PHASE2_CLASSES.get(cls, f"class_{cls}") if cls != -1 else "unknown"
@@ -243,7 +278,8 @@ def run_live():
 
         out_rgb = np.array(img, dtype=np.uint8)
 
-        if frame_idx % 30 == 0 and frame_idx > 0:
+        # FPS print
+        if frame_idx % 60 == 0 and frame_idx > 0:
             elapsed = time.time() - t0
             fps_eff = frame_idx / max(elapsed, 1e-6)
             print(f"Live FPS: ~{fps_eff:.2f} | detect every {DETECT_EVERY_N} frames")
