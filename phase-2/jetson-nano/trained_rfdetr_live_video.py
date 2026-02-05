@@ -26,7 +26,7 @@ assert CKPT_PATH.exists(), f"Missing checkpoint: {CKPT_PATH}"
 THRESHOLD = 0.30
 
 # Detect more often for smoother tracking (start here, then increase if stable)
-DETECT_EVERY_N = 2
+DETECT_EVERY_N = 1
 
 # Filter tiny boxes to reduce flicker
 MIN_BOX_AREA = 32 * 32
