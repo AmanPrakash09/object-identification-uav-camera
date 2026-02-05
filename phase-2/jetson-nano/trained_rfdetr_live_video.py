@@ -47,8 +47,10 @@ def gstreamer_pipeline(sensor_id=0, width=1280, height=720, framerate=30, flip_m
         f"nvarguscamerasrc sensor-id={sensor_id} ! "
         f"video/x-raw(memory:NVMM), width=(int){width}, height=(int){height}, framerate=(fraction){framerate}/1 ! "
         f"nvvidconv flip-method={flip_method} ! "
+        f"video/x-raw, format=(string)BGRx ! "
+        f"videoconvert ! "
         f"video/x-raw, format=(string)RGB ! "
-        f"appsink name=appsink emit-signals=true drop=true max-buffers=1 sync=false"
+        f"appsink name=appsink drop=true max-buffers=1 sync=false"
     )
 
 
