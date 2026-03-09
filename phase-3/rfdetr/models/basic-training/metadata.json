@@ -1,0 +1,139 @@
+{
+  "source_run_name": "run_20260309_021415",
+  "source_output_dir": "object-identification-uav-camera\\phase-3\\rfdetr\\checkpoints\\run_20260309_021415",
+  "source_log_path": "object-identification-uav-camera\\phase-3\\rfdetr\\logs\\run_20260309_021415.log",
+  "num_classes": 6,
+  "class_names_ordered": [
+    "Human",
+    "Bicycle",
+    "Car",
+    "Truck",
+    "Bus",
+    "Other"
+  ],
+  "target_image_size": 384,
+  "train_config": {
+    "dataset_file": "coco",
+    "dataset_dir": "object-identification-uav-camera\\phase-3\\rfdetr",
+    "coco_path": "object-identification-uav-camera\\phase-3\\rfdetr",
+    "device": "cuda",
+    "num_classes": 6,
+    "input_size": 384,
+    "resolution": 384,
+    "batch_size": 2,
+    "grad_accum_steps": 8,
+    "epochs": 20,
+    "lr": 0.0001,
+    "amp": true,
+    "use_ema": true,
+    "do_benchmark": false,
+    "fp16_eval": false,
+    "early_stopping": true,
+    "early_stopping_patience": 5,
+    "num_workers": 0,
+    "checkpoint_interval": 1,
+    "tensorboard": true,
+    "output_dir": "object-identification-uav-camera\\phase-3\\rfdetr\\checkpoints\\run_20260309_021415"
+  },
+  "test_results": {
+    "class_error": 24.738931628039282,
+    "loss": 5.212943741874973,
+    "loss_ce": 0.6785897582116789,
+    "loss_bbox": 0.10818202319099521,
+    "loss_giou": 0.923830603269765,
+    "loss_ce_0": 0.678753706660584,
+    "loss_bbox_0": 0.11355964676307066,
+    "loss_giou_0": 0.9461585803188547,
+    "loss_ce_enc": 0.656478102189781,
+    "loss_bbox_enc": 0.12100660340031133,
+    "loss_giou_enc": 0.9863847484336282,
+    "loss_ce_unscaled": 0.6785897582116789,
+    "class_error_unscaled": 24.738931628039282,
+    "loss_bbox_unscaled": 0.021636404615425823,
+    "loss_giou_unscaled": 0.4619153016348825,
+    "cardinality_error_unscaled": 235.88138686131387,
+    "loss_ce_0_unscaled": 0.678753706660584,
+    "loss_bbox_0_unscaled": 0.02271192934003788,
+    "loss_giou_0_unscaled": 0.47307929015942735,
+    "cardinality_error_0_unscaled": 235.88138686131387,
+    "loss_ce_enc_unscaled": 0.656478102189781,
+    "loss_bbox_enc_unscaled": 0.024201320691618823,
+    "loss_giou_enc_unscaled": 0.4931923742168141,
+    "cardinality_error_enc_unscaled": 235.88138686131387,
+    "results_json": {
+      "class_map": [
+        {
+          "class": "Human",
+          "map@50:95": 0.09838677297416278,
+          "map@50": 0.24349468981542735,
+          "precision": 0.2010643220731143,
+          "recall": 0.34
+        },
+        {
+          "class": "Bicycle",
+          "map@50:95": 0.10136787931741954,
+          "map@50": 0.2791903663468421,
+          "precision": 0.4070527790751985,
+          "recall": 0.34
+        },
+        {
+          "class": "Car",
+          "map@50:95": 0.37218937127044216,
+          "map@50": 0.6067012947642905,
+          "precision": 0.9531623931623932,
+          "recall": 0.34
+        },
+        {
+          "class": "Truck",
+          "map@50:95": 0.23033496932310982,
+          "map@50": 0.38543892279263287,
+          "precision": 0.6229838709677419,
+          "recall": 0.34
+        },
+        {
+          "class": "Bus",
+          "map@50:95": 0.05626651587511369,
+          "map@50": 0.10302651592563132,
+          "precision": 0.10403638430926662,
+          "recall": 0.34
+        },
+        {
+          "class": "Other",
+          "map@50:95": 0.2964265457371189,
+          "map@50": 0.47916345344124994,
+          "precision": 0.8775510204081632,
+          "recall": 0.34
+        },
+        {
+          "class": "all",
+          "map@50:95": 0.1924953424162278,
+          "map@50": 0.34950254051434565,
+          "precision": 0.527641794999313,
+          "recall": 0.34
+        }
+      ],
+      "map": 0.34950254051434565,
+      "precision": 0.527641794999313,
+      "recall": 0.34
+    },
+    "coco_eval_bbox": [
+      0.1924953424162278,
+      0.34950254051434565,
+      0.18194931709560422,
+      0.07961908363140639,
+      0.3056454215622531,
+      0.5136257755579552,
+      0.08202707154619629,
+      0.21827660951010588,
+      0.2909044637061531,
+      0.16528207765249142,
+      0.44371814602337084,
+      0.6396126221030937
+    ]
+  },
+  "pinned_files": {
+    "best_ema": "object-identification-uav-camera\\phase-3\\rfdetr\\models\\basic-training\\visdrone_rfdetr_nano_best_ema.pth",
+    "latest_resume": "object-identification-uav-camera\\phase-3\\rfdetr\\models\\basic-training\\visdrone_rfdetr_nano_latest_resume.pth",
+    "best_total": "object-identification-uav-camera\\phase-3\\rfdetr\\models\\basic-training\\visdrone_rfdetr_nano_best_total.pth"
+  }
+}
