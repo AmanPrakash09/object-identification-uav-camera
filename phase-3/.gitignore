@@ -9,7 +9,7 @@ visdrone-dataset-infrared/test-dev/
 rfdetr/venv/
 rfdetr/train2017/
 rfdetr/val2017/
-rfdetr/rf-detr-nano.pth
+rfdetr/training/rf-detr-nano.pth
 
 rfdetr/logs/
 rfdetr/checkpoints/
