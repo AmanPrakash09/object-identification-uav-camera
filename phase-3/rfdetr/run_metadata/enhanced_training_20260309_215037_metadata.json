@@ -1,0 +1,54 @@
+{
+  "run_name": "enhanced_training_20260309_215037",
+  "experiment_name": "enhanced-training",
+  "based_on": "basic-training",
+  "log_path": "D:\\2025 Winter\\CPEN491\\object-identification-uav-camera\\phase-3\\rfdetr\\logs\\enhanced_training_20260309_215037.log",
+  "output_dir": "D:\\2025 Winter\\CPEN491\\object-identification-uav-camera\\phase-3\\rfdetr\\checkpoints\\enhanced_training_20260309_215037",
+  "seed": 42,
+  "num_classes": 6,
+  "class_names_ordered": [
+    "Human",
+    "Bicycle",
+    "Car",
+    "Truck",
+    "Bus",
+    "Other"
+  ],
+  "class_id_to_name": {
+    "1": "Human",
+    "2": "Bicycle",
+    "3": "Car",
+    "4": "Truck",
+    "5": "Bus",
+    "6": "Other"
+  },
+  "target_image_size": 512,
+  "train_config": {
+    "dataset_file": "coco",
+    "dataset_dir": "D:\\2025 Winter\\CPEN491\\object-identification-uav-camera\\phase-3\\rfdetr",
+    "coco_path": "D:\\2025 Winter\\CPEN491\\object-identification-uav-camera\\phase-3\\rfdetr",
+    "device": "cuda",
+    "num_classes": 6,
+    "input_size": 512,
+    "resolution": 512,
+    "batch_size": 1,
+    "grad_accum_steps": 16,
+    "epochs": 40,
+    "lr": 0.0001,
+    "amp": true,
+    "use_ema": true,
+    "do_benchmark": false,
+    "fp16_eval": false,
+    "early_stopping": true,
+    "early_stopping_patience": 5,
+    "num_workers": 0,
+    "checkpoint_interval": 1,
+    "tensorboard": true,
+    "output_dir": "D:\\2025 Winter\\CPEN491\\object-identification-uav-camera\\phase-3\\rfdetr\\checkpoints\\enhanced_training_20260309_215037"
+  },
+  "notes": {
+    "primary_change_1": "increase input resolution from 384 to 512",
+    "primary_change_2": "increase training length from 20 epochs to 40 epochs",
+    "primary_change_3": "reduce batch size to 1 for lower-VRAM GPUs"
+  }
+}

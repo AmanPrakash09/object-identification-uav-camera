@@ -14,7 +14,6 @@ rfdetr/training/rf-detr-nano.pth
 rfdetr/logs/
 rfdetr/checkpoints/
 
-rfdetr/models/*.pth
 rfdetr/videos/VisDrone2019-VID-test-dev/
 rfdetr/videos/*.zip
 
@@ -25,3 +24,4 @@ jetson-nano/*.pth
 jetson-nano/example-outputs/
 
 rfdetr/models/basic-training/*.pth
+rfdetr/models/enhanced-training/*.pth
