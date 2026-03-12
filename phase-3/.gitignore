@@ -11,11 +11,15 @@ rfdetr/train2017/
 rfdetr/val2017/
 rfdetr/training/rf-detr-nano.pth
 
+rfdetr/tracking-speed/temp_frame.jpg
+
 rfdetr/logs/
 rfdetr/checkpoints/
 
 rfdetr/videos/VisDrone2019-VID-test-dev/
 rfdetr/videos/*.zip
+rfdetr/videos/uav0000009_03358_v
+rfdetr/videos/uav0000120_04775_v
 
 rfdetr/temp_frame.jpg
 
