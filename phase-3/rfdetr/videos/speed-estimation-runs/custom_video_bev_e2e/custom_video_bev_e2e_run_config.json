@@ -1,0 +1,27 @@
+{
+  "run_name": "custom_video_bev_e2e",
+  "input_type": "video",
+  "video_path": "C:\\Users\\apraka01\\projects\\object-identification-uav-camera\\phase-3\\rfdetr\\videos\\custom_video.mp4",
+  "frames_dir": null,
+  "output_video_path": "C:\\Users\\apraka01\\projects\\object-identification-uav-camera\\phase-3\\rfdetr\\videos\\speed-estimation-runs\\custom_video_bev_e2e\\custom_video_bev_e2e_annotated.mp4",
+  "representative_point_mode": "center",
+  "border_margin_px": 20,
+  "detect_every_n": 1,
+  "det_threshold": 0.3,
+  "min_box_area": 900,
+  "default_speed_window": 5,
+  "window_speed_frame_gap": 5,
+  "window_speed_smoothing": 5,
+  "final_min_observations": 10,
+  "final_use_windowed_speed": true,
+  "final_max_speed_kmh": 130.0,
+  "final_max_step_change_kmh": 12.0,
+  "final_hold_last_valid": true,
+  "final_smoothing_window": 7,
+  "reference_vehicle_dimensions": {
+    "type": "passenger_car",
+    "width_m": 1.8,
+    "length_m": 4.5
+  },
+  "calibration_name": "single_average_passenger_car_bev"
+}
