@@ -1,0 +1,121 @@
+{
+  "source_output_dir": "E:\\projects\\object-identification-uav-camera\\phase-3\\rfdetr\\checkpoints\\smoke_test_phase3_dronevehicle",
+  "source_log_path": "E:\\projects\\object-identification-uav-camera\\phase-3\\rfdetr\\logs\\smoke_test_phase3_dronevehicle.log",
+  "experiment_name": "phase-3-dronevehicle-smoke-test",
+  "based_on": "enhanced-training",
+  "source_checkpoint": "E:\\projects\\object-identification-uav-camera\\phase-3\\rfdetr\\models\\enhanced-training\\visdrone_rfdetr_nano_best_ema.pth",
+  "shim_root": "E:\\projects\\object-identification-uav-camera\\phase-3\\rfdetr\\infrared-data-shim",
+  "num_classes": 6,
+  "class_names_ordered": [
+    "Human",
+    "Bicycle",
+    "Car",
+    "Truck",
+    "Bus",
+    "Other"
+  ],
+  "target_image_size": 512,
+  "train_config": {
+    "dataset_file": "coco",
+    "dataset_dir": "E:\\projects\\object-identification-uav-camera\\phase-3\\rfdetr\\infrared-data-shim",
+    "coco_path": "E:\\projects\\object-identification-uav-camera\\phase-3\\rfdetr\\infrared-data-shim",
+    "device": "cuda",
+    "num_classes": 6,
+    "input_size": 512,
+    "resolution": 512,
+    "batch_size": 1,
+    "grad_accum_steps": 1,
+    "epochs": 1,
+    "lr": 0.0001,
+    "amp": true,
+    "use_ema": false,
+    "do_benchmark": false,
+    "fp16_eval": false,
+    "early_stopping": true,
+    "early_stopping_patience": 5,
+    "num_workers": 0,
+    "checkpoint_interval": 1,
+    "tensorboard": true,
+    "output_dir": "E:\\projects\\object-identification-uav-camera\\phase-3\\rfdetr\\checkpoints\\smoke_test_phase3_dronevehicle"
+  },
+  "test_results": {
+    "class_error": 6.809685116969784,
+    "loss": 3.556892299059705,
+    "loss_ce": 0.7498401177018739,
+    "loss_bbox": 0.0838344445416591,
+    "loss_giou": 0.32612637595265315,
+    "loss_ce_0": 0.7540021939209482,
+    "loss_bbox_0": 0.08523913604505944,
+    "loss_giou_0": 0.32936353408119723,
+    "loss_ce_enc": 0.7561016121715652,
+    "loss_bbox_enc": 0.10192394340531286,
+    "loss_giou_enc": 0.37046093354730725,
+    "loss_ce_unscaled": 0.7498401177018739,
+    "class_error_unscaled": 6.809685116969784,
+    "loss_bbox_unscaled": 0.016766888916193223,
+    "loss_giou_unscaled": 0.16306318797632657,
+    "cardinality_error_unscaled": 285.4795779441797,
+    "loss_ce_0_unscaled": 0.7540021939209482,
+    "loss_bbox_0_unscaled": 0.017047827211848967,
+    "loss_giou_0_unscaled": 0.16468176704059861,
+    "cardinality_error_0_unscaled": 285.4795779441797,
+    "loss_ce_enc_unscaled": 0.7561016121715652,
+    "loss_bbox_enc_unscaled": 0.020384788685627257,
+    "loss_giou_enc_unscaled": 0.18523046677365362,
+    "cardinality_error_enc_unscaled": 285.4795779441797,
+    "results_json": {
+      "class_map": [
+        {
+          "class": "Car",
+          "map@50:95": 0.5977706968242438,
+          "map@50": 0.9067398063945805,
+          "precision": 0.9310584958217271,
+          "recall": 0.73
+        },
+        {
+          "class": "Truck",
+          "map@50:95": 0.372542920863903,
+          "map@50": 0.5751973253906407,
+          "precision": 0.3759314456035768,
+          "recall": 0.73
+        },
+        {
+          "class": "Bus",
+          "map@50:95": 0.6448246437088972,
+          "map@50": 0.8709508119474746,
+          "precision": 0.8890728476821192,
+          "recall": 0.73
+        },
+        {
+          "class": "all",
+          "map@50:95": 0.5383794204656813,
+          "map@50": 0.7842959812442319,
+          "precision": 0.7320209297024745,
+          "recall": 0.73
+        }
+      ],
+      "map": 0.7842959812442319,
+      "precision": 0.7320209297024745,
+      "recall": 0.73
+    },
+    "coco_eval_bbox": [
+      0.5383794204656813,
+      0.7842959812442319,
+      0.6333746935380252,
+      0.17628015629657579,
+      0.5309102971200872,
+      0.6428976798031135,
+      0.1696011102161479,
+      0.5125273740231318,
+      0.698981587319086,
+      0.3581168831168831,
+      0.7114432046404758,
+      0.8180812898930062
+    ]
+  },
+  "pinned_files": {
+    "best_ema": null,
+    "latest_resume": "E:\\projects\\object-identification-uav-camera\\phase-3\\rfdetr\\models\\infrared-training-smoke\\dronevehicle_rfdetr_nano_smoke_latest_resume.pth",
+    "best_total": "E:\\projects\\object-identification-uav-camera\\phase-3\\rfdetr\\models\\infrared-training-smoke\\dronevehicle_rfdetr_nano_smoke_best_total.pth"
+  }
+}

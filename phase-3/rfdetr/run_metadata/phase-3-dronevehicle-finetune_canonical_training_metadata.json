@@ -1,0 +1,165 @@
+{
+  "created_at": "2026-03-13T03:16:29.100260",
+  "experiment_name": "phase-3-dronevehicle-finetune",
+  "based_on": "enhanced-training",
+  "dataset_name": "DroneVehicle",
+  "dataset_modalities": [
+    "rgb",
+    "infrared"
+  ],
+  "continuation_checkpoint": "E:\\projects\\object-identification-uav-camera\\phase-3\\rfdetr\\models\\enhanced-training\\visdrone_rfdetr_nano_best_ema.pth",
+  "shim_root": "E:\\projects\\object-identification-uav-camera\\phase-3\\rfdetr\\infrared-data-shim",
+  "num_classes": 6,
+  "class_id_to_name": {
+    "1": "Human",
+    "2": "Bicycle",
+    "3": "Car",
+    "4": "Truck",
+    "5": "Bus",
+    "6": "Other"
+  },
+  "class_names_ordered": [
+    "Human",
+    "Bicycle",
+    "Car",
+    "Truck",
+    "Bus",
+    "Other"
+  ],
+  "coco_categories": [
+    {
+      "id": 1,
+      "name": "Human",
+      "supercategory": "object"
+    },
+    {
+      "id": 2,
+      "name": "Bicycle",
+      "supercategory": "object"
+    },
+    {
+      "id": 3,
+      "name": "Car",
+      "supercategory": "object"
+    },
+    {
+      "id": 4,
+      "name": "Truck",
+      "supercategory": "object"
+    },
+    {
+      "id": 5,
+      "name": "Bus",
+      "supercategory": "object"
+    },
+    {
+      "id": 6,
+      "name": "Other",
+      "supercategory": "object"
+    }
+  ],
+  "target_image_size": 512,
+  "original_image_size": {
+    "width": 840,
+    "height": 712
+  },
+  "border_policy": {
+    "remove_white_border": true,
+    "border_pixels": {
+      "left": 100,
+      "right": 100,
+      "top": 100,
+      "bottom": 100
+    },
+    "expected_cropped_size": {
+      "width": 640,
+      "height": 512
+    },
+    "apply_during_coco_export": true,
+    "apply_consistently_to_rgb_and_ir": true,
+    "adjust_annotation_coordinates_after_crop": true
+  },
+  "preprocessing_policy": {
+    "image": {
+      "target_size": 512,
+      "resize_enabled": true,
+      "resize_method": "resize_longest_side_then_pad",
+      "preserve_aspect_ratio": true,
+      "pad_value": 0,
+      "input_expected_after_border_crop": {
+        "width": 640,
+        "height": 512
+      }
+    },
+    "annotations": {
+      "source_format": "xml_polygon",
+      "source_box_type": "oriented_box_polygon",
+      "convert_to_axis_aligned_coco_bbox": true,
+      "polygon_to_bbox_method": "minmax_enclosing_rectangle",
+      "crop_boxes_with_image": true,
+      "clip_boxes_to_image": true,
+      "filter_non_positive_boxes": true,
+      "min_box_area_px_after_resize": 4
+    },
+    "normalization": {
+      "enabled": true,
+      "mean": [
+        0.485,
+        0.456,
+        0.406
+      ],
+      "std": [
+        0.229,
+        0.224,
+        0.225
+      ]
+    },
+    "training_phase3": {
+      "continuation_training": true,
+      "initialize_from_previous_checkpoint": true,
+      "source_checkpoint_family": "enhanced-training",
+      "small_object_focus": true,
+      "aggressive_random_crop": false,
+      "heavy_downscale_augmentation": false,
+      "paired_modal_dataset": true,
+      "planned_training_usage": "treat_rgb_and_ir_as_independent_detection_samples_after_conversion",
+      "notes": "Phase 3 continues training from the enhanced RF-DETR Nano checkpoint using DroneVehicle RGB/infrared data converted into COCO-style axis-aligned detection annotations."
+    }
+  },
+  "train_config": {
+    "dataset_file": "coco",
+    "dataset_dir": "E:\\projects\\object-identification-uav-camera\\phase-3\\rfdetr\\infrared-data-shim",
+    "coco_path": "E:\\projects\\object-identification-uav-camera\\phase-3\\rfdetr\\infrared-data-shim",
+    "device": "cuda",
+    "num_classes": 6,
+    "input_size": 512,
+    "resolution": 512,
+    "batch_size": 1,
+    "grad_accum_steps": 16,
+    "epochs": 40,
+    "lr": 0.0001,
+    "amp": true,
+    "use_ema": true,
+    "do_benchmark": false,
+    "fp16_eval": false,
+    "early_stopping": true,
+    "early_stopping_patience": 5,
+    "num_workers": 0,
+    "checkpoint_interval": 1,
+    "tensorboard": true
+  },
+  "dataset_summary": {
+    "train_images_total": 35980,
+    "train_annotations_total": 540252,
+    "val_images_total": 2938,
+    "val_annotations_total": 42661
+  },
+  "notes": {
+    "primary_change_1": "switch from VisDrone-derived dataset to DroneVehicle",
+    "primary_change_2": "continue training from enhanced RF-DETR Nano checkpoint",
+    "primary_change_3": "train on both RGB and infrared images via a unified COCO shim",
+    "primary_change_4": "remove 100-pixel white border before export/training",
+    "primary_change_5": "convert XML oriented polygons into axis-aligned COCO boxes",
+    "motivation": "adapt the detector to vehicle-focused RGB/infrared aerial imagery while preserving the Phase 3 canonical taxonomy"
+  }
+}

@@ -34,5 +34,6 @@ jetson-nano/example-outputs/
 
 rfdetr/models/basic-training/*.pth
 rfdetr/models/enhanced-training/*.pth
+rfdetr/models/infrared-training-smoke/*.pth
 
 rfdetr/coco_annotations_dronevehicle/*
