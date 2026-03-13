@@ -4,10 +4,12 @@ visdrone-dataset-rgb/test-dev/
 
 visdrone-dataset-infrared/train/
 visdrone-dataset-infrared/val/
-visdrone-dataset-infrared/test-dev/
+visdrone-dataset-infrared/test/
 
 rfdetr/venv/
 rfdetr/train2017/
+rfdetr/val2017/
+rfdetr/infrared-data-shim/*
 rfdetr/val2017/
 rfdetr/training/rf-detr-nano.pth
 
