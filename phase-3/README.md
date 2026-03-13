@@ -35,3 +35,5 @@ visdrone-dataset-infrared/
     ├── images/
     └── annotations/
 ```
+
+TODO: update this with file structure and instructions from other READMEs
