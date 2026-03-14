@@ -4,19 +4,27 @@ visdrone-dataset-rgb/test-dev/
 
 visdrone-dataset-infrared/train/
 visdrone-dataset-infrared/val/
-visdrone-dataset-infrared/test-dev/
+visdrone-dataset-infrared/test/
 
 rfdetr/venv/
 rfdetr/train2017/
 rfdetr/val2017/
+rfdetr/infrared-data-shim/*
+rfdetr/val2017/
 rfdetr/training/rf-detr-nano.pth
+
+rfdetr/tracking-speed/temp_frame.jpg
 
 rfdetr/logs/
 rfdetr/checkpoints/
 
-rfdetr/models/*.pth
 rfdetr/videos/VisDrone2019-VID-test-dev/
+rfdetr/videos/calibration_frame*
 rfdetr/videos/*.zip
+rfdetr/videos/*.jpg
+rfdetr/videos/tracked_with*
+rfdetr/videos/uav0000009_03358_v
+rfdetr/videos/uav0000120_04775_v
 
 rfdetr/temp_frame.jpg
 
@@ -25,3 +33,7 @@ jetson-nano/*.pth
 jetson-nano/example-outputs/
 
 rfdetr/models/basic-training/*.pth
+rfdetr/models/enhanced-training/*.pth
+rfdetr/models/infrared-training-smoke/*.pth
+
+rfdetr/coco_annotations_dronevehicle/*

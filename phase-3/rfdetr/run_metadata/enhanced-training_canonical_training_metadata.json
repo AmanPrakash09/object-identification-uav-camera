@@ -1,0 +1,83 @@
+{
+  "created_at": "2026-03-10T01:34:02.637076",
+  "experiment_name": "enhanced-training",
+  "based_on": "basic-training",
+  "num_classes": 6,
+  "class_id_to_name": {
+    "1": "Human",
+    "2": "Bicycle",
+    "3": "Car",
+    "4": "Truck",
+    "5": "Bus",
+    "6": "Other"
+  },
+  "class_names_ordered": [
+    "Human",
+    "Bicycle",
+    "Car",
+    "Truck",
+    "Bus",
+    "Other"
+  ],
+  "coco_categories": [
+    {
+      "id": 1,
+      "name": "Human",
+      "supercategory": "object"
+    },
+    {
+      "id": 2,
+      "name": "Bicycle",
+      "supercategory": "object"
+    },
+    {
+      "id": 3,
+      "name": "Car",
+      "supercategory": "object"
+    },
+    {
+      "id": 4,
+      "name": "Truck",
+      "supercategory": "object"
+    },
+    {
+      "id": 5,
+      "name": "Bus",
+      "supercategory": "object"
+    },
+    {
+      "id": 6,
+      "name": "Other",
+      "supercategory": "object"
+    }
+  ],
+  "target_image_size": 512,
+  "train_config": {
+    "dataset_file": "coco",
+    "dataset_dir": "F:\\object-identification-uav-camera\\phase-3\\rfdetr",
+    "coco_path": "F:\\object-identification-uav-camera\\phase-3\\rfdetr",
+    "device": "cuda",
+    "num_classes": 6,
+    "input_size": 512,
+    "resolution": 512,
+    "batch_size": 1,
+    "grad_accum_steps": 16,
+    "epochs": 40,
+    "lr": 0.0001,
+    "amp": true,
+    "use_ema": true,
+    "do_benchmark": false,
+    "fp16_eval": false,
+    "early_stopping": true,
+    "early_stopping_patience": 5,
+    "num_workers": 0,
+    "checkpoint_interval": 1,
+    "tensorboard": true
+  },
+  "notes": {
+    "primary_change_1": "increase input resolution from 384 to 512",
+    "primary_change_2": "increase training length from 20 epochs to 40 epochs",
+    "primary_change_3": "reduce batch size to 1 for 8GB-class GPUs",
+    "motivation": "improve small-object detection while keeping dataset and taxonomy fixed"
+  }
+}

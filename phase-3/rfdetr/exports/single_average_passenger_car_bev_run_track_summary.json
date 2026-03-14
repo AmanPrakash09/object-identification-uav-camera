@@ -1,0 +1,28 @@
+[
+  {
+    "track_id": 1,
+    "class_id": 3,
+    "confidence": 0.9112660884857178,
+    "num_observations": 53,
+    "first_frame": 0,
+    "last_frame": 52,
+    "total_distance_m": 31.855426788330078,
+    "first_world_point": [
+      0.7874655723571777,
+      -13.441859245300293
+    ],
+    "last_world_point": [
+      0.942165195941925,
+      18.405595779418945
+    ],
+    "mean_raw_speed_kmh": 66.1612660082487,
+    "max_raw_speed_kmh": 137.70097589492798,
+    "mean_smoothed_speed_kmh": 62.35515865500157,
+    "max_smoothed_speed_kmh": 127.35592060089111,
+    "mean_windowed_smoothed_speed_kmh": 61.075615333914755,
+    "max_windowed_smoothed_speed_kmh": 118.2825521850586,
+    "mean_final_display_speed_kmh": 58.38075447320009,
+    "max_final_display_speed_kmh": 105.6148795427595,
+    "latest_final_display_speed_kmh": 105.6148795427595
+  }
+]

@@ -1,0 +1,20 @@
+{
+  "export_name": "single_average_passenger_car_bev_run",
+  "representative_point_mode": "center",
+  "border_margin_px": 20,
+  "default_speed_window": 5,
+  "window_speed_frame_gap": 5,
+  "window_speed_smoothing": 5,
+  "final_min_observations": 10,
+  "final_use_windowed_speed": true,
+  "final_max_speed_kmh": 130.0,
+  "final_max_step_change_kmh": 12.0,
+  "final_hold_last_valid": true,
+  "final_smoothing_window": 7,
+  "reference_vehicle_dimensions": {
+    "type": "passenger_car",
+    "width_m": 1.8,
+    "length_m": 4.5
+  },
+  "calibration_name": "single_average_passenger_car_bev"
+}
