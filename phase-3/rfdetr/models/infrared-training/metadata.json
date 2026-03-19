@@ -1,0 +1,59 @@
+{
+  "source_run_name": "phase3_dronevehicle_20260316_100706",
+  "source_output_dir": "/app/checkpoints/phase3_dronevehicle_20260316_100706",
+  "source_log_path": "/app/logs/phase3_dronevehicle_20260316_100706.log",
+  "experiment_name": "phase-3-dronevehicle-finetune",
+  "based_on": "enhanced-training",
+  "dataset_name": "DroneVehicle",
+  "dataset_modalities": [
+    "rgb",
+    "infrared"
+  ],
+  "source_checkpoint_local": "/app/models/enhanced-training/visdrone_rfdetr_nano_best_ema.pth",
+  "source_checkpoint_gcs_prefix": "gs://rfdetr-model-versions/enhanced-training",
+  "shim_root_local": "/app/infrared-data",
+  "shim_root_gcs": "gs://infrared-data",
+  "num_classes": 6,
+  "class_names_ordered": [
+    "Human",
+    "Bicycle",
+    "Car",
+    "Truck",
+    "Bus",
+    "Other"
+  ],
+  "target_image_size": 512,
+  "train_config": {
+    "dataset_file": "coco",
+    "dataset_dir": "/app/infrared-data",
+    "coco_path": "/app/infrared-data",
+    "device": "cuda",
+    "num_classes": 6,
+    "input_size": 512,
+    "resolution": 512,
+    "batch_size": 1,
+    "grad_accum_steps": 16,
+    "epochs": 40,
+    "lr": 0.0001,
+    "amp": true,
+    "use_ema": true,
+    "do_benchmark": false,
+    "fp16_eval": false,
+    "early_stopping": true,
+    "early_stopping_patience": 5,
+    "num_workers": 4,
+    "checkpoint_interval": 1,
+    "tensorboard": true,
+    "output_dir": "/app/checkpoints/phase3_dronevehicle_20260316_100706"
+  },
+  "test_results": null,
+  "pinned_files_local": {
+    "best_ema": "/app/models/infrared-training/dronevehicle_rfdetr_nano_best_ema.pth",
+    "latest_resume": "/app/models/infrared-training/dronevehicle_rfdetr_nano_latest_resume.pth",
+    "best_total": "/app/models/infrared-training/dronevehicle_rfdetr_nano_best_total.pth"
+  },
+  "gcs_destinations": {
+    "run_prefix": "gs://rfdetr-model-versions/infrared-training/phase3_dronevehicle_20260316_100706",
+    "latest_prefix": "gs://rfdetr-model-versions/infrared-training/latest"
+  }
+}
