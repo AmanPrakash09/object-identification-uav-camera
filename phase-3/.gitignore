@@ -39,3 +39,5 @@ rfdetr/models/infrared-training/*.pth
 rfdetr/models/infrared-training-smoke/*.pth
 
 rfdetr/coco_annotations_dronevehicle/*
+
+carla-vid-data/venv/
