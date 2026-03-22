@@ -13,7 +13,7 @@ rfdetr/infrared-data-shim/*
 rfdetr/val2017/
 rfdetr/training/rf-detr-nano.pth
 
-rfdetr/tracking-speed/temp_frame.jpg
+rfdetr/tracking-speed/*.jpg
 
 rfdetr/logs/
 rfdetr/checkpoints/

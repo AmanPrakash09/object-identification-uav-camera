@@ -1,5 +1,5 @@
 {
-  "export_name": "carla_rgb_with_speeds_1_bev_run",
+  "export_name": "carla_rgb_speeds_bev_run",
   "representative_point_mode": "center",
   "border_margin_px": 20,
   "default_speed_window": 5,
@@ -13,8 +13,8 @@
   "final_smoothing_window": 7,
   "reference_vehicle_dimensions": {
     "type": "passenger_car",
-    "width_m": 1.8,
-    "length_m": 4.5
+    "width_m": 2.16,
+    "length_m": 4.79
   },
-  "calibration_name": "carla_rgb_with_speeds_1_bev"
+  "calibration_name": "carla_rgb_speeds_bev"
 }
