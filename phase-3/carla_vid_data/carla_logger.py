@@ -131,6 +131,17 @@ def main():
         spawn_point = world.get_map().get_spawn_points()[0]
         vehicle = world.spawn_actor(vehicle_bp, spawn_point)
         actor_list.append(vehicle)
+# Multiply by 2 because 'extent' is only half the size!
+        bbox = vehicle.bounding_box
+        car_length = bbox.extent.x * 2.0
+        car_width = bbox.extent.y * 2.0
+        car_height = bbox.extent.z * 2.0
+        
+        print(f"\n--- VEHICLE SPECS ---")
+        print(f"Length: {car_length:.2f} meters")
+        print(f"Width:  {car_width:.2f} meters")
+        print(f"Height: {car_height:.2f} meters")
+        print(f"---------------------\n")
         
         spectator = world.get_spectator()
 
