@@ -6,7 +6,7 @@ import json
 
 # Hunt down the pre-compiled CARLA library
 try:
-    sys.path.append(glob.glob('../carla/dist/carla-*%d.%d-%s.egg' % (
+    sys.path.append(glob.glob('../../../../Downloads/CARLA_0.9.10/WindowsNoEditor/PythonAPI/carla/dist/carla-*%d.%d-%s.egg' % (
         sys.version_info.major,
         sys.version_info.minor,
         'win-amd64' if os.name == 'nt' else 'linux-x86_64'))[0])
@@ -102,6 +102,15 @@ def main():
     client = carla.Client('localhost', 2000)
     client.set_timeout(5.0)
     world = client.get_world()
+
+
+    custom_weather = world.get_weather()
+    # 90.0 is high noon, 15.0 is golden hour/sunset, -90.0 is pitch black midnight
+    custom_weather.sun_altitude_angle = 83.0 
+    custom_weather.cloudiness = 29.0       # 0 to 100
+    custom_weather.precipitation = 0.0   # 0 to 100 (Rain!)
+    custom_weather.fog_density = 2.0      # 0 to 100
+    world.set_weather(custom_weather)
     actor_list = []
     speed_log_file = None
 
@@ -132,7 +141,7 @@ def main():
         camera_bp.set_attribute('fov', str(FOV))
 
         camera_transform = carla.Transform(
-            carla.Location(x=spawn_point.location.x, y=spawn_point.location.y, z=spawn_point.location.z + 50.0),
+            carla.Location(x=spawn_point.location.x, y=spawn_point.location.y, z=spawn_point.location.z + 25.0),
             carla.Rotation(pitch=-90.0) 
         )
         camera = world.spawn_actor(camera_bp, camera_transform)
