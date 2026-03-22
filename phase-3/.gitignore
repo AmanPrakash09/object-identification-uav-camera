@@ -40,4 +40,4 @@ rfdetr/models/infrared-training-smoke/*.pth
 
 rfdetr/coco_annotations_dronevehicle/*
 
-carla-vid-data/venv/
+carla_vid_data/venv/
