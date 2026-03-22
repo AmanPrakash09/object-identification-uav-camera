@@ -1,0 +1,54 @@
+[
+  {
+    "track_id": 1,
+    "class_id": 3,
+    "confidence": 0.9176639318466187,
+    "num_observations": 488,
+    "first_frame": 4,
+    "last_frame": 538,
+    "total_distance_m": 253.2708740234375,
+    "first_world_point": [
+      0.9239359498023987,
+      -3.167597532272339
+    ],
+    "last_world_point": [
+      2.521641731262207,
+      21.27577781677246
+    ],
+    "mean_raw_speed_kmh": 29.790496811168165,
+    "max_raw_speed_kmh": 98.6098051071167,
+    "mean_smoothed_speed_kmh": 29.608824808209288,
+    "max_smoothed_speed_kmh": 91.05671310424805,
+    "mean_windowed_smoothed_speed_kmh": 29.5242377911458,
+    "max_windowed_smoothed_speed_kmh": 90.45443572998047,
+    "mean_final_display_speed_kmh": 29.45663739926153,
+    "max_final_display_speed_kmh": 90.20805064610072,
+    "latest_final_display_speed_kmh": 51.39910835266114
+  },
+  {
+    "track_id": 2,
+    "class_id": 3,
+    "confidence": 0.9100384712219238,
+    "num_observations": 34,
+    "first_frame": 591,
+    "last_frame": 624,
+    "total_distance_m": 36.51884078979492,
+    "first_world_point": [
+      -7.55384635925293,
+      24.170164108276367
+    ],
+    "last_world_point": [
+      -19.467041015625,
+      -10.288267135620117
+    ],
+    "mean_raw_speed_kmh": 79.67747263474898,
+    "max_raw_speed_kmh": 126.78749656677246,
+    "mean_smoothed_speed_kmh": 75.17484838962555,
+    "max_smoothed_speed_kmh": 118.12654495239258,
+    "mean_windowed_smoothed_speed_kmh": 74.40233452961364,
+    "max_windowed_smoothed_speed_kmh": 111.74709594726565,
+    "mean_final_display_speed_kmh": 71.94644501913889,
+    "max_final_display_speed_kmh": 102.0181524876186,
+    "latest_final_display_speed_kmh": 102.0181524876186
+  }
+]
