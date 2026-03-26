@@ -22,10 +22,13 @@ rfdetr/videos/VisDrone2019-VID-test-dev/
 rfdetr/videos/calibration_frame*
 rfdetr/videos/*.zip
 rfdetr/videos/*.jpg
+rfdetr/videos/*.csv
 rfdetr/videos/tracked_with*
 rfdetr/videos/uav0000009_03358_v
 rfdetr/videos/uav0000120_04775_v
 rfdetr/videos/personal_simulation/*
+rfdetr/videos/*.mp4
+rfdetr/videos/live_style_pipeline_outputs/
 
 rfdetr/temp_frame.jpg
 
