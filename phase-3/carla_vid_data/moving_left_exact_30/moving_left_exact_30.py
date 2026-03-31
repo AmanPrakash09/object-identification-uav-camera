@@ -98,6 +98,14 @@ def main():
     client = carla.Client('localhost', 2000)
     client.set_timeout(5.0)
     world = client.get_world()
+
+    custom_weather = world.get_weather()
+    # 90.0 is high noon, 15.0 is golden hour/sunset, -90.0 is pitch black midnight
+    custom_weather.sun_altitude_angle = 83.0 
+    custom_weather.cloudiness = 87.0       # 0 to 100
+    custom_weather.precipitation = 0.0   # 0 to 100 (Rain!)
+    custom_weather.fog_density = 2.0      # 0 to 100
+    world.set_weather(custom_weather)
     actor_list = []
     speed_log_file = None
 
@@ -131,7 +139,7 @@ def main():
             carla.Location(
                 x=spawn_point.location.x, 
                 y=spawn_point.location.y + 20.0,  # <-- 20 meters Right
-                z=spawn_point.location.z + 50.0
+                z=spawn_point.location.z + 25.0
             ),
             carla.Rotation(pitch=-90.0) 
         )
