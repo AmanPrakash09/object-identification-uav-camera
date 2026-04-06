@@ -113,15 +113,15 @@ For moving-camera videos, we:
 - form a **camera velocity vector**
 - compensate using:
 
-\[
+$$
 \mathbf{v}_{object,world} = \mathbf{v}_{object,relative} + \mathbf{v}_{camera}
-\]
+$$
 
 The final displayed speed is:
 
-\[
+$$
 speed = \|\mathbf{v}_{object,world}\|
-\]
+$$
 
 So although many details are refined, the central idea is still:
 
@@ -166,8 +166,8 @@ So the notebook upgrades the estimator from:
 
 to:
 - **2D velocity components**
-  - \(v_x\)
-  - \(v_y\)
+  - $v_x$
+  - $v_y$
 
 This lets us reason about motion direction and makes compensation possible.
 
@@ -209,9 +209,9 @@ This is the key conceptual step of the notebook.
 
 The compensation is:
 
-\[
+$$
 \mathbf{v}_{object,world} = \mathbf{v}_{object,relative} + \mathbf{v}_{camera}
-\]
+$$
 
 This allows us to move from:
 - “how the object appears to move in a moving camera”
@@ -295,9 +295,9 @@ We found that raw vector compensation was directionally correct, but a small cal
 
 So we introduced:
 
-\[
+$$
 \mathbf{v}_{camera,eff} = \alpha \mathbf{v}_{camera}
-\]
+$$
 
 ### Why alpha was introduced
 In practice, the measured object motion does not behave as a perfect direct sum of:
@@ -410,7 +410,7 @@ And in the top-left corner, it shows:
 To keep the output clean, the final video does **not** show:
 - representative-point dot
 - trajectory tail
-- \(v_x\) / \(v_y\) text
+- $v_x$ / $v_y$ text
 - confidence scores
 
 ---
@@ -425,45 +425,18 @@ We learned:
 
 So instead of forcing one global value, we compute:
 
-\[
+$$
 \alpha_{eff} = \alpha_{lr}|d_x| + \alpha_{ud}|d_y|
-\]
+$$
 
 where:
-- \(\alpha_{lr}\) is the left/right compensation gain
-- \(\alpha_{ud}\) is the up/down compensation gain
-- \(d_x, d_y\) are the camera direction components
+- $\alpha_{lr}$ is the left/right compensation gain
+- $\alpha_{ud}$ is the up/down compensation gain
+- $d_x, d_y$ are the camera direction components
 
 This gives:
 - mostly horizontal camera motion → alpha close to horizontal setting
 - mostly vertical camera motion → alpha close to vertical setting
 - diagonal motion → interpolated behavior
-
----
-
-# Notebook Structure Summary
-
-A reader going through the notebook should think of it in this order:
-
-## 1. Build the still-camera baseline
-Make sure the original relative estimator behaves sensibly.
-
-## 2. Upgrade from speed to velocity
-Start working with \(v_x\) and \(v_y\), not just speed magnitude.
-
-## 3. Estimate background ego direction
-Use background optical flow while masking tracked objects.
-
-## 4. Compensate with vector addition
-Combine relative object velocity with camera velocity.
-
-## 5. Tune the compensation magnitude
-Use alpha sweeps to reduce bias.
-
-## 6. Test more camera directions
-Validate the method on left, right, up, and down.
-
-## 7. Build a final standalone pipeline
-Create a clean end-to-end speed estimator that can run on its own.
 
 ---
