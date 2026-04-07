@@ -20,8 +20,12 @@ import pygame
 # Config
 # -----------------------------
 SCRIPT_DIR = Path(__file__).resolve().parent
-CKPT_PATH = SCRIPT_DIR / "visdrone_rfdetr_nano_best_ema.pth"
-assert CKPT_PATH.exists(), f"Missing checkpoint: {CKPT_PATH}"
+
+RGB_CKPT_PATH = SCRIPT_DIR / "visdrone_rfdetr_nano_best_ema.pth"
+IR_CKPT_PATH = SCRIPT_DIR / "dronevehicle_rfdetr_nano_best_ema.pth"
+
+assert RGB_CKPT_PATH.exists(), f"Missing RGB checkpoint: {RGB_CKPT_PATH}"
+assert IR_CKPT_PATH.exists(), f"Missing IR checkpoint: {IR_CKPT_PATH}"
 
 THRESHOLD = 0.30
 
@@ -41,6 +45,19 @@ PHASE2_CLASSES = {
     4: "Truck",
     5: "Bus",
     6: "Motorcycle",
+}
+
+CAMERA_CONFIGS = {
+    0: {
+        "label": "IMX219 RGB (CAM0)",
+        "short_label": "RGB",
+        "ckpt": RGB_CKPT_PATH,
+    },
+    1: {
+        "label": "IMX462 IR (CAM1)",
+        "short_label": "IR",
+        "ckpt": IR_CKPT_PATH,
+    },
 }
 
 TEMP_FRAME_PATH = SCRIPT_DIR / "_temp_frame.jpg"
@@ -99,7 +116,7 @@ class GstCamera:
 
 
 # -----------------------------
-# Model init
+# Model / tracker init helpers
 # -----------------------------
 device = "cuda" if torch.cuda.is_available() else "cpu"
 print("Torch:", torch.__version__)
@@ -107,30 +124,49 @@ print("CUDA available:", torch.cuda.is_available())
 if torch.cuda.is_available():
     print("GPU:", torch.cuda.get_device_name(0))
 print("Device:", device)
-print("Checkpoint:", CKPT_PATH)
-
-model = RFDETRNano(pretrain_weights=str(CKPT_PATH))
-model.model.model.to(device)
-model.model.model.eval()
-
-# Try to reduce latency spikes via optimization
-try:
-    model.optimize_for_inference()
-    print("Model optimized for inference.")
-except Exception:
-    # Not fatal if optimize_for_inference isn't available
-    pass
 
 
-# -----------------------------
-# ByteTrack (supervision)
-# -----------------------------
-tracker = sv.ByteTrack(
-    track_activation_threshold=0.25,   # slightly lower than detection threshold
-    lost_track_buffer=120,             # longer persistence between detections
-    minimum_matching_threshold=0.6,    # easier matching reduces flicker
-    frame_rate=60
-)
+def load_model(ckpt_path: Path):
+    print(f"Loading checkpoint: {ckpt_path}")
+    model = RFDETRNano(pretrain_weights=str(ckpt_path))
+    model.model.model.to(device)
+    model.model.model.eval()
+
+    try:
+        model.optimize_for_inference()
+        print("Model optimized for inference.")
+    except Exception:
+        pass
+
+    return model
+
+
+def make_tracker():
+    return sv.ByteTrack(
+        track_activation_threshold=0.25,   # slightly lower than detection threshold
+        lost_track_buffer=120,             # longer persistence between detections
+        minimum_matching_threshold=0.6,    # easier matching reduces flicker
+        frame_rate=60
+    )
+
+
+def open_camera(sensor_id: int, width: int, height: int, fps: int):
+    print(f"Opening camera {sensor_id}: {CAMERA_CONFIGS[sensor_id]['label']}")
+    return GstCamera(
+        gstreamer_pipeline(
+            sensor_id=sensor_id,
+            width=width,
+            height=height,
+            framerate=fps,
+            flip_method=0
+        )
+    )
+
+
+# Initial model/tracker
+current_sensor = 0
+model = load_model(CAMERA_CONFIGS[current_sensor]["ckpt"])
+tracker = make_tracker()
 
 # Track metadata: track_id -> (class_id, confidence)
 track_meta = {}
@@ -180,7 +216,7 @@ def active_tracks_to_boxes_ids(tracker_obj):
 def init_display(width: int, height: int):
     pygame.init()
     screen = pygame.display.set_mode((width, height))
-    pygame.display.set_caption("RF-DETR + ByteTrack (no cv2)")
+    pygame.display.set_caption("RF-DETR + ByteTrack")
     return screen
 
 
@@ -190,38 +226,89 @@ def show_frame(screen, frame_rgb: np.ndarray):
     pygame.display.flip()
 
 
-def should_quit():
+def handle_events():
+    """
+    Returns:
+        "quit"   -> exit app
+        "toggle" -> switch camera + model
+        None     -> no action
+    """
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
-            return True
-        if event.type == pygame.KEYDOWN and event.key == pygame.K_q:
-            return True
-    return False
+            return "quit"
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_q:
+                return "quit"
+            if event.key == pygame.K_c:
+                return "toggle"
+    return None
+
+
+def update_window_title(sensor_id: int):
+    cam_label = CAMERA_CONFIGS[sensor_id]["label"]
+    ckpt_name = CAMERA_CONFIGS[sensor_id]["ckpt"].name
+    pygame.display.set_caption(f"RF-DETR + ByteTrack | {cam_label} | {ckpt_name}")
 
 
 # -----------------------------
 # Main loop
 # -----------------------------
 def run_live():
+    global current_sensor, model, tracker, track_meta, track_last_seen
+
     # Argus logs showed 59.999 FPS at 1280x720
     # Set FPS=60 so tracker timing matches reality
     W, H, FPS = 1280, 720, 60
 
-    cam = GstCamera(gstreamer_pipeline(sensor_id=0, width=W, height=H, framerate=FPS, flip_method=0))
+    cam = open_camera(current_sensor, W, H, FPS)
     screen = init_display(W, H)
+    update_window_title(current_sensor)
 
     try:
         font = ImageFont.truetype("DejaVuSans.ttf", 16)
     except Exception:
         font = ImageFont.load_default()
 
-    print("Camera opened. Press 'q' to quit.")
+    print("Camera opened. Press 'c' to switch cameras/models, 'q' to quit.")
+    print(f"Current camera: {CAMERA_CONFIGS[current_sensor]['label']}")
+    print(f"Current checkpoint: {CAMERA_CONFIGS[current_sensor]['ckpt']}")
+
     frame_idx = 0
     t0 = time.time()
 
     while True:
-        if should_quit():
+        action = handle_events()
+        if action == "quit":
             break
+
+        elif action == "toggle":
+            try:
+                cam.release()
+            except Exception:
+                pass
+
+            # Toggle camera
+            current_sensor = 1 if current_sensor == 0 else 0
+
+            # Reopen selected camera
+            cam = open_camera(current_sensor, W, H, FPS)
+
+            # Reload matching model/checkpoint
+            model = load_model(CAMERA_CONFIGS[current_sensor]["ckpt"])
+
+            # Reset tracker and per-track metadata so tracks don't leak across cameras
+            tracker = make_tracker()
+            track_meta.clear()
+            track_last_seen.clear()
+
+            update_window_title(current_sensor)
+
+            print(f"Switched to camera: {CAMERA_CONFIGS[current_sensor]['label']}")
+            print(f"Switched to checkpoint: {CAMERA_CONFIGS[current_sensor]['ckpt']}")
+
+            # Small debounce / allow pipeline to settle
+            time.sleep(0.2)
+            continue
 
         ret, frame_rgb = cam.read()
         if not ret:
@@ -268,10 +355,15 @@ def run_live():
             x1, y1, x2, y2 = box.astype(int).tolist()
             cls, conf = track_meta.get(tid, (-1, 0.0))
             label = PHASE2_CLASSES.get(cls, f"class_{cls}") if cls != -1 else "unknown"
-            text = f"ID {tid}: {label} {conf:.2f}"
+            cam_name = CAMERA_CONFIGS[current_sensor]["short_label"]
+            text = f"[{cam_name}] ID {tid}: {label} {conf:.2f}"
 
             draw.rectangle([x1, y1, x2, y2], outline=(0, 255, 0), width=2)
-            tw, th = draw.textbbox((0, 0), text, font=font)[2:]
+
+            bbox = draw.textbbox((0, 0), text, font=font)
+            tw = bbox[2] - bbox[0]
+            th = bbox[3] - bbox[1]
+
             tx, ty = x1, max(0, y1 - th - 4)
             draw.rectangle([tx, ty, tx + tw + 6, ty + th + 4], fill=(0, 255, 0))
             draw.text((tx + 3, ty + 2), text, fill=(0, 0, 0), font=font)
@@ -282,7 +374,11 @@ def run_live():
         if frame_idx % 60 == 0 and frame_idx > 0:
             elapsed = time.time() - t0
             fps_eff = frame_idx / max(elapsed, 1e-6)
-            print(f"Live FPS: ~{fps_eff:.2f} | detect every {DETECT_EVERY_N} frames")
+            print(
+                f"Live FPS: ~{fps_eff:.2f} | detect every {DETECT_EVERY_N} frames | "
+                f"camera: {CAMERA_CONFIGS[current_sensor]['label']} | "
+                f"model: {CAMERA_CONFIGS[current_sensor]['ckpt'].name}"
+            )
 
         show_frame(screen, out_rgb)
         frame_idx += 1
