@@ -1,0 +1,73 @@
+{
+  "source_run_name": "rgb_video_training_20260404_211650",
+  "source_output_dir": "/ubc/ece/home/rl/ugrads/amanprakash09/bigdata/amanprakash09/object-identification-uav-camera/checkpoints/rgb_video_training_20260404_211650",
+  "source_log_path": "/ubc/ece/home/rl/ugrads/amanprakash09/bigdata/amanprakash09/object-identification-uav-camera/logs/rgb_video_training_20260404_211650.log",
+  "source_epoch_metrics_jsonl_path": "/ubc/ece/home/rl/ugrads/amanprakash09/bigdata/amanprakash09/object-identification-uav-camera/logs/rgb_video_training_20260404_211650_epoch_metrics.jsonl",
+  "source_epoch_metrics_csv_path": "/ubc/ece/home/rl/ugrads/amanprakash09/bigdata/amanprakash09/object-identification-uav-camera/logs/rgb_video_training_20260404_211650_epoch_metrics.csv",
+  "source_plots_dir": "/ubc/ece/home/rl/ugrads/amanprakash09/bigdata/amanprakash09/object-identification-uav-camera/logs/plots/rgb_video_training_20260404_211650",
+  "experiment_name": "rgb-video-training",
+  "based_on": "rgb-image-training",
+  "source_checkpoint_dir": "/ubc/ece/home/rl/ugrads/amanprakash09/bigdata/amanprakash09/object-identification-uav-camera/models/rgb-image-training",
+  "resolved_source_checkpoint": "/ubc/ece/home/rl/ugrads/amanprakash09/bigdata/amanprakash09/object-identification-uav-camera/models/rgb-image-training/visdrone_rfdetr_nano_best_ema.pth",
+  "dataset_name": "VisDrone-VID",
+  "dataset_root": "/ubc/ece/home/rl/ugrads/amanprakash09/bigdata/amanprakash09/object-identification-uav-camera/visdrone-dataset-rgb-videos",
+  "shim_root": "/ubc/ece/home/rl/ugrads/amanprakash09/bigdata/amanprakash09/object-identification-uav-camera/coco_shim_rgb_video",
+  "num_classes": 6,
+  "class_names_ordered": [
+    "Human",
+    "Bicycle",
+    "Car",
+    "Truck",
+    "Bus",
+    "Other"
+  ],
+  "class_id_to_name": {
+    "1": "Human",
+    "2": "Bicycle",
+    "3": "Car",
+    "4": "Truck",
+    "5": "Bus",
+    "6": "Other"
+  },
+  "target_image_size": 512,
+  "train_config": {
+    "dataset_file": "coco",
+    "dataset_dir": "/ubc/ece/home/rl/ugrads/amanprakash09/bigdata/amanprakash09/object-identification-uav-camera/coco_shim_rgb_video",
+    "coco_path": "/ubc/ece/home/rl/ugrads/amanprakash09/bigdata/amanprakash09/object-identification-uav-camera/coco_shim_rgb_video",
+    "device": "cuda",
+    "num_classes": 6,
+    "input_size": 512,
+    "resolution": 512,
+    "batch_size": 1,
+    "grad_accum_steps": 16,
+    "epochs": 40,
+    "lr": 0.0001,
+    "amp": true,
+    "use_ema": true,
+    "do_benchmark": false,
+    "fp16_eval": false,
+    "early_stopping": true,
+    "early_stopping_patience": 5,
+    "num_workers": 0,
+    "checkpoint_interval": 1,
+    "tensorboard": true,
+    "output_dir": "/ubc/ece/home/rl/ugrads/amanprakash09/bigdata/amanprakash09/object-identification-uav-camera/checkpoints/rgb_video_training_20260404_211650"
+  },
+  "dataset_summary": {
+    "train_images_total": 24201,
+    "train_annotations_total": 1105516,
+    "val_images_total": 2846,
+    "val_annotations_total": 114132
+  },
+  "test_results": null,
+  "pinned_files": {
+    "best_ema": "/ubc/ece/home/rl/ugrads/amanprakash09/bigdata/amanprakash09/object-identification-uav-camera/models/rgb-video-training/visdrone_rfdetr_nano_best_ema.pth",
+    "latest_resume": "/ubc/ece/home/rl/ugrads/amanprakash09/bigdata/amanprakash09/object-identification-uav-camera/models/rgb-video-training/visdrone_rfdetr_nano_latest_resume.pth",
+    "best_total": "/ubc/ece/home/rl/ugrads/amanprakash09/bigdata/amanprakash09/object-identification-uav-camera/models/rgb-video-training/visdrone_rfdetr_nano_best_total.pth"
+  },
+  "notes": {
+    "primary_change_1": "continued training from rgb-image-training checkpoints",
+    "primary_change_2": "trained on VisDrone RGB video data converted to frame-level COCO",
+    "primary_change_3": "kept detailed run logs and epoch metrics for later analysis"
+  }
+}
