@@ -1,5 +1,6 @@
 from pathlib import Path
 import time
+import inspect
 import numpy as np
 import torch
 from rfdetr import RFDETRNano
@@ -33,7 +34,15 @@ DETECT_EVERY_N = 1
 MIN_BOX_AREA = 32 * 32
 
 # Keep drawing tracks for this many frames after last association
-DISPLAY_GRACE = 15  # tuned for ~30 FPS webcam
+DISPLAY_GRACE = 15
+
+# USB webcam config
+USB_DEVICE = "/dev/video0"
+W = 1280
+H = 720
+FPS = 30
+
+TEMP_FRAME_PATH = SCRIPT_DIR / "_temp_frame.jpg"
 
 PHASE2_CLASSES = {
     1: "Human",
@@ -44,13 +53,92 @@ PHASE2_CLASSES = {
     6: "Motorcycle",
 }
 
-TEMP_FRAME_PATH = SCRIPT_DIR / "_temp_frame.jpg"
+SPEED_ESTIMATION_CLASS_IDS = {1, 2, 3, 4, 5, 6}
 
-# USB webcam config
-USB_DEVICE = "/dev/video0"
-W = 1280
-H = 720
-FPS = 30
+# -----------------------------
+# Speed-estimation config
+# -----------------------------
+CLASS_DIMENSION_PRIORS = {
+    "Human": {
+        "width_m": 0.50,
+        "length_m": 0.50,
+        "height_m": 1.70,
+        "rep_point_mode": "bottom_center",
+        "rep_y_offset_px": 8.0,
+    },
+    "Bicycle": {
+        "width_m": 0.60,
+        "length_m": 1.80,
+        "height_m": 1.10,
+        "rep_point_mode": "bottom_center",
+        "rep_y_offset_px": 8.0,
+    },
+    "Car": {
+        "width_m": 2.05,
+        "length_m": 5.10,
+        "height_m": 1.50,
+        "rep_point_mode": "bottom_center",
+        "rep_y_offset_px": 8.0,
+    },
+    "Truck": {
+        "width_m": 2.50,
+        "length_m": 7.00,
+        "height_m": 3.20,
+        "rep_point_mode": "bottom_center",
+        "rep_y_offset_px": 8.0,
+    },
+    "Bus": {
+        "width_m": 2.55,
+        "length_m": 12.00,
+        "height_m": 3.20,
+        "rep_point_mode": "bottom_center",
+        "rep_y_offset_px": 8.0,
+    },
+    "Motorcycle": {
+        "width_m": 0.80,
+        "length_m": 2.20,
+        "height_m": 1.20,
+        "rep_point_mode": "bottom_center",
+        "rep_y_offset_px": 8.0,
+    },
+    "Other": {
+        "width_m": 2.00,
+        "length_m": 4.50,
+        "height_m": 1.80,
+        "rep_point_mode": "bottom_center",
+        "rep_y_offset_px": 8.0,
+    },
+}
+
+CLASS_PRIOR_ALIASES = {
+    "person": "Human",
+    "pedestrian": "Human",
+    "people": "Human",
+    "bike": "Bicycle",
+    "bicycle": "Bicycle",
+    "cyclist": "Bicycle",
+    "car": "Car",
+    "sedan": "Car",
+    "van": "Car",
+    "suv": "Car",
+    "pickup": "Car",
+    "truck": "Truck",
+    "lorry": "Truck",
+    "semi": "Truck",
+    "bus": "Bus",
+    "coach": "Bus",
+    "motorcycle": "Motorcycle",
+    "motorbike": "Motorcycle",
+    "other": "Other",
+    "motor": "Other",
+    "vehicle": "Other",
+}
+
+MIN_REASONABLE_SPEED_KMH = 0.0
+MAX_REASONABLE_SPEED_KMH = 250.0
+SPEED_WINDOW = 5
+MPP_WINDOW = 5
+BORDER_MARGIN_PX = 20
 
 
 # -----------------------------
@@ -181,22 +269,51 @@ except Exception:
 
 
 # -----------------------------
-# ByteTrack (supervision)
+# ByteTrack
 # -----------------------------
-tracker = sv.ByteTrack(
-    track_activation_threshold=0.25,
-    lost_track_buffer=60,              # shorter than CSI version since webcam is ~30 FPS
-    minimum_matching_threshold=0.6,
-    frame_rate=FPS
-)
+def build_tracker(frame_rate):
+    sig = inspect.signature(sv.ByteTrack.__init__)
+    params = set(sig.parameters.keys())
+    kwargs = {}
 
-# Track metadata: track_id -> (class_id, confidence)
-track_meta = {}
+    if "track_activation_threshold" in params:
+        kwargs["track_activation_threshold"] = 0.25
+    if "lost_track_buffer" in params:
+        kwargs["lost_track_buffer"] = 60
+    if "minimum_matching_threshold" in params:
+        kwargs["minimum_matching_threshold"] = 0.6
+    if "frame_rate" in params:
+        kwargs["frame_rate"] = int(round(frame_rate))
 
-# Track last seen frame index: track_id -> frame_idx
-track_last_seen = {}
+    if "track_thresh" in params:
+        kwargs["track_thresh"] = 0.25
+    if "track_buffer" in params:
+        kwargs["track_buffer"] = 60
+    if "match_thresh" in params:
+        kwargs["match_thresh"] = 0.6
+
+    try:
+        tracker = sv.ByteTrack(**kwargs)
+    except TypeError:
+        tracker = sv.ByteTrack()
+
+    if hasattr(tracker, "reset"):
+        tracker.reset()
+
+    return tracker
 
 
+tracker = build_tracker(frame_rate=FPS)
+
+# Track metadata
+track_meta = {}       # track_id -> (class_id, label, confidence)
+track_last_seen = {}  # track_id -> frame_idx
+track_histories = {}  # track_id -> history dict
+
+
+# -----------------------------
+# Detection helpers
+# -----------------------------
 def rfdetr_to_sv_detections(det, min_conf=0.30):
     xyxy = np.asarray(det.xyxy, dtype=np.float32)
     conf = np.asarray(det.confidence, dtype=np.float32)
@@ -237,12 +354,201 @@ def active_tracks_to_boxes_ids(tracker_obj):
 
 
 # -----------------------------
+# Speed-estimation helpers
+# -----------------------------
+def canonicalize_class_name(label: str) -> str:
+    if label is None:
+        return "Other"
+    label = str(label).strip()
+    if label in CLASS_DIMENSION_PRIORS:
+        return label
+    lowered = label.lower()
+    if lowered in CLASS_PRIOR_ALIASES:
+        return CLASS_PRIOR_ALIASES[lowered]
+    return "Other"
+
+
+def get_class_dimension_prior(label: str) -> dict:
+    canonical = canonicalize_class_name(label)
+    prior = CLASS_DIMENSION_PRIORS[canonical].copy()
+    prior["canonical_label"] = canonical
+    prior["requested_label"] = label
+    return prior
+
+
+def bbox_center_xyxy(box_xyxy):
+    x1, y1, x2, y2 = map(float, box_xyxy)
+    return np.array([(x1 + x2) / 2.0, (y1 + y2) / 2.0], dtype=np.float32)
+
+
+def bbox_bottom_center_xyxy(box_xyxy, y_offset_px=0.0):
+    x1, y1, x2, y2 = map(float, box_xyxy)
+    cx = 0.5 * (x1 + x2)
+    cy = y2 + float(y_offset_px)
+    return np.array([cx, cy], dtype=np.float32)
+
+
+def representative_point_xyxy(box_xyxy, class_label):
+    prior = get_class_dimension_prior(class_label)
+    mode = prior["rep_point_mode"]
+    y_offset_px = prior["rep_y_offset_px"]
+
+    if mode == "center":
+        return bbox_center_xyxy(box_xyxy)
+    if mode == "bottom_center":
+        return bbox_bottom_center_xyxy(box_xyxy, y_offset_px=y_offset_px)
+    raise ValueError(f"Unsupported representative point mode: {mode}")
+
+
+def bbox_touches_border(box_xyxy, image_width, image_height, margin_px=20):
+    x1, y1, x2, y2 = map(float, box_xyxy)
+    return (
+        x1 <= margin_px or
+        y1 <= margin_px or
+        x2 >= (image_width - margin_px) or
+        y2 >= (image_height - margin_px)
+    )
+
+
+def moving_average_ignore_none(values, window=5):
+    recent = [float(v) for v in values if v is not None]
+    if len(recent) == 0:
+        return None
+    recent = recent[-int(window):]
+    return float(np.mean(recent))
+
+
+def moving_average_nan(values, window=5):
+    out = np.full(len(values), np.nan, dtype=np.float64)
+    for i in range(len(values)):
+        lo = max(0, i - window + 1)
+        vals = values[lo:i + 1]
+        vals = vals[np.isfinite(vals)]
+        if len(vals) > 0:
+            out[i] = np.mean(vals)
+    return out
+
+
+def is_reasonable_speed_kmh(speed_kmh, min_kmh=0.0, max_kmh=250.0):
+    if speed_kmh is None:
+        return False
+    return float(min_kmh) <= float(speed_kmh) <= float(max_kmh)
+
+
+def make_empty_track_history():
+    return {
+        "frames": [],
+        "boxes": [],
+        "labels": [],
+        "confidences": [],
+        "image_points": [],
+        "mpp_x": [],
+        "mpp_y": [],
+        "mpp_geom": [],
+        "mpp_smoothed": [],
+        "raw_speeds_kmh": [],
+        "smoothed_speeds_kmh": [],
+    }
+
+
+def safe_bbox_dims(box_xyxy):
+    x1, y1, x2, y2 = map(float, box_xyxy)
+    w_px = max(float(x2 - x1), 1e-6)
+    h_px = max(float(y2 - y1), 1e-6)
+    return w_px, h_px
+
+
+def compute_local_scale_from_box(box_xyxy, class_label):
+    prior = get_class_dimension_prior(class_label)
+    width_m = float(prior["width_m"])
+    length_m = float(prior["length_m"])
+
+    bbox_w_px, bbox_h_px = safe_bbox_dims(box_xyxy)
+
+    mpp_x = width_m / bbox_w_px
+    mpp_y = length_m / bbox_h_px
+    mpp_geom = float(np.sqrt(max(mpp_x, 1e-12) * max(mpp_y, 1e-12)))
+
+    return {
+        "canonical_label": prior["canonical_label"],
+        "width_m": width_m,
+        "length_m": length_m,
+        "bbox_width_px": bbox_w_px,
+        "bbox_height_px": bbox_h_px,
+        "mpp_x": mpp_x,
+        "mpp_y": mpp_y,
+        "mpp_geom": mpp_geom,
+    }
+
+
+def append_track_observation(track_history, frame_idx, box_xyxy, class_label, confidence, fps):
+    rep_pt = representative_point_xyxy(box_xyxy, class_label)
+    scale_info = compute_local_scale_from_box(box_xyxy, class_label)
+
+    track_history["frames"].append(int(frame_idx))
+    track_history["boxes"].append(np.asarray(box_xyxy, dtype=np.float32))
+    track_history["labels"].append(class_label)
+    track_history["confidences"].append(float(confidence))
+    track_history["image_points"].append(rep_pt)
+
+    track_history["mpp_x"].append(scale_info["mpp_x"])
+    track_history["mpp_y"].append(scale_info["mpp_y"])
+    track_history["mpp_geom"].append(scale_info["mpp_geom"])
+
+    mpp_smoothed_arr = moving_average_nan(
+        np.asarray(track_history["mpp_geom"], dtype=np.float64),
+        window=MPP_WINDOW
+    )
+    current_mpp_smoothed = float(mpp_smoothed_arr[-1]) if np.isfinite(mpp_smoothed_arr[-1]) else None
+    track_history["mpp_smoothed"].append(current_mpp_smoothed)
+
+    raw_speed_kmh = None
+    if len(track_history["image_points"]) >= 2:
+        p1 = np.asarray(track_history["image_points"][-2], dtype=np.float64)
+        p2 = np.asarray(track_history["image_points"][-1], dtype=np.float64)
+
+        dx = float(p2[0] - p1[0])
+        dy = float(p2[1] - p1[1])
+        disp_px = float(np.sqrt(dx * dx + dy * dy))
+
+        prev_mpp = track_history["mpp_smoothed"][-2]
+        curr_mpp = track_history["mpp_smoothed"][-1]
+
+        if prev_mpp is not None and curr_mpp is not None:
+            local_mpp = 0.5 * (float(prev_mpp) + float(curr_mpp))
+            dt = 1.0 / float(fps)
+            raw_speed_kmh = (disp_px * local_mpp / dt) * 3.6
+
+            if not is_reasonable_speed_kmh(
+                raw_speed_kmh,
+                min_kmh=MIN_REASONABLE_SPEED_KMH,
+                max_kmh=MAX_REASONABLE_SPEED_KMH,
+            ):
+                raw_speed_kmh = None
+
+    track_history["raw_speeds_kmh"].append(raw_speed_kmh)
+
+    smoothed_speed_kmh = moving_average_ignore_none(
+        track_history["raw_speeds_kmh"],
+        window=SPEED_WINDOW
+    )
+    track_history["smoothed_speeds_kmh"].append(smoothed_speed_kmh)
+
+    return {
+        "rep_pt": rep_pt,
+        "scale_info": scale_info,
+        "raw_speed_kmh": raw_speed_kmh,
+        "smoothed_speed_kmh": smoothed_speed_kmh,
+    }
+
+
+# -----------------------------
 # Display (pygame)
 # -----------------------------
 def init_display(width: int, height: int):
     pygame.init()
     screen = pygame.display.set_mode((width, height))
-    pygame.display.set_caption("RF-DETR + ByteTrack (USB webcam)")
+    pygame.display.set_caption("RF-DETR + ByteTrack + Speed Estimation (USB webcam)")
     return screen
 
 
@@ -274,6 +580,7 @@ def run_live():
         font = ImageFont.load_default()
 
     print(f"USB camera opened on {USB_DEVICE}. Press 'q' to quit.")
+
     frame_idx = 0
     t0 = time.time()
 
@@ -297,18 +604,18 @@ def run_live():
 
                 # Keep same behavior as your original script
                 _ = tracker.update_with_tensors(build_tensors_from_detections(detections))
-
                 det_with_ids = tracker.update_with_detections(detections)
+
                 if len(det_with_ids) > 0 and getattr(det_with_ids, "tracker_id", None) is not None:
                     for i in range(len(det_with_ids)):
                         tid = int(det_with_ids.tracker_id[i])
                         cls = int(det_with_ids.class_id[i])
                         conf = float(det_with_ids.confidence[i])
 
-                        track_meta[tid] = (cls, conf)
+                        label = PHASE2_CLASSES.get(cls, f"class_{cls}")
+                        track_meta[tid] = (cls, label, conf)
                         track_last_seen[tid] = frame_idx
 
-            # Draw active tracks using PIL
             img = Image.fromarray(frame_rgb)
             draw = ImageDraw.Draw(img)
 
@@ -319,11 +626,46 @@ def run_live():
                     continue
 
                 x1, y1, x2, y2 = box.astype(int).tolist()
-                cls, conf = track_meta.get(tid, (-1, 0.0))
-                label = PHASE2_CLASSES.get(cls, f"class_{cls}") if cls != -1 else "unknown"
-                text = f"ID {tid}: {label} {conf:.2f}"
+                cls, label, conf = track_meta.get(tid, (-1, "unknown", 0.0))
+
+                speed_text = ""
+                rep_pt = None
+
+                if cls in SPEED_ESTIMATION_CLASS_IDS:
+                    if not bbox_touches_border(box, W, H, margin_px=BORDER_MARGIN_PX):
+                        if tid not in track_histories:
+                            track_histories[tid] = make_empty_track_history()
+
+                        result = append_track_observation(
+                            track_history=track_histories[tid],
+                            frame_idx=frame_idx,
+                            box_xyxy=box,
+                            class_label=label,
+                            confidence=conf,
+                            fps=FPS,
+                        )
+
+                        rep_pt = result["rep_pt"]
+                        smooth_speed = result["smoothed_speed_kmh"]
+
+                        if smooth_speed is not None:
+                            speed_text = f" | {smooth_speed:.2f} km/h"
+
+                text = f"ID {tid}: {label} {conf:.2f}{speed_text}"
 
                 draw.rectangle([x1, y1, x2, y2], outline=(0, 255, 0), width=2)
+
+                if rep_pt is not None:
+                    rx, ry = int(round(rep_pt[0])), int(round(rep_pt[1]))
+                    draw.ellipse([rx - 3, ry - 3, rx + 3, ry + 3], fill=(255, 0, 0))
+
+                    pts = np.array(track_histories[tid]["image_points"][-20:], dtype=np.float32)
+                    if len(pts) >= 2:
+                        pts = np.round(pts).astype(int)
+                        for j in range(1, len(pts)):
+                            p1 = tuple(pts[j - 1])
+                            p2 = tuple(pts[j])
+                            draw.line([p1, p2], fill=(0, 0, 255), width=2)
 
                 bbox = draw.textbbox((0, 0), text, font=font)
                 tw = bbox[2] - bbox[0]
