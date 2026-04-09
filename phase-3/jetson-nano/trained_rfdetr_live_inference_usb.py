@@ -32,20 +32,33 @@ assert IR_CKPT_PATH.exists(), f"Missing IR checkpoint: {IR_CKPT_PATH}"
 THRESHOLD = 0.30
 DETECT_EVERY_N = 1
 MIN_BOX_AREA = 32 * 32
-DISPLAY_GRACE = 30  # draw for this many frames after last association
+DISPLAY_GRACE = 15  # tuned for ~30 FPS operation
 
 TEMP_FRAME_PATH = SCRIPT_DIR / "_temp_frame.jpg"
 
+# Shared runtime size/FPS
+W = 1280
+H = 720
+FPS = 30
+
+# USB RGB webcam path
+RGB_USB_DEVICE = "/dev/video0"
+
 CAMERA_CONFIGS = {
     0: {
-        "label": "IMX219 RGB (CAM0)",
+        "label": "USB RGB Webcam",
         "short_label": "RGB",
         "ckpt": RGB_CKPT_PATH,
+        "source_type": "usb",
+        "usb_device": RGB_USB_DEVICE,
+        "usb_try_mjpeg_first": True,
     },
     1: {
         "label": "IMX462 IR (CAM1)",
         "short_label": "IR",
         "ckpt": IR_CKPT_PATH,
+        "source_type": "csi",
+        "sensor_id": 1,
     },
 }
 
@@ -101,7 +114,7 @@ CLASS_DIMENSION_PRIORS = {
 # ============================================================
 # GStreamer pipeline
 # ============================================================
-def gstreamer_pipeline(sensor_id=0, width=1280, height=720, framerate=30, flip_method=0):
+def csi_gstreamer_pipeline(sensor_id=0, width=1280, height=720, framerate=30, flip_method=0):
     return (
         f"nvarguscamerasrc sensor-id={sensor_id} ! "
         f"video/x-raw(memory:NVMM), width=(int){width}, height=(int){height}, framerate=(fraction){framerate}/1 ! "
@@ -113,9 +126,31 @@ def gstreamer_pipeline(sensor_id=0, width=1280, height=720, framerate=30, flip_m
     )
 
 
+def usb_gstreamer_pipeline_mjpeg(device="/dev/video0", width=1280, height=720, framerate=30):
+    return (
+        f"v4l2src device={device} ! "
+        f"image/jpeg, width=(int){width}, height=(int){height}, framerate=(fraction){framerate}/1 ! "
+        f"jpegdec ! "
+        f"videoconvert ! "
+        f"video/x-raw, format=(string)RGB ! "
+        f"appsink name=appsink drop=true max-buffers=1 sync=false"
+    )
+
+
+def usb_gstreamer_pipeline_raw(device="/dev/video0", width=1280, height=720, framerate=30):
+    return (
+        f"v4l2src device={device} ! "
+        f"video/x-raw, width=(int){width}, height=(int){height}, framerate=(fraction){framerate}/1 ! "
+        f"videoconvert ! "
+        f"video/x-raw, format=(string)RGB ! "
+        f"appsink name=appsink drop=true max-buffers=1 sync=false"
+    )
+
+
 class GstCamera:
     def __init__(self, pipeline: str):
         Gst.init(None)
+        self.pipeline_str = pipeline
         self.pipeline = Gst.parse_launch(pipeline)
         self.appsink = self.pipeline.get_by_name("appsink")
         if self.appsink is None:
@@ -123,7 +158,11 @@ class GstCamera:
 
         self.appsink.set_property("drop", True)
         self.appsink.set_property("max-buffers", 1)
-        self.pipeline.set_state(Gst.State.PLAYING)
+
+        ret = self.pipeline.set_state(Gst.State.PLAYING)
+        if ret == Gst.StateChangeReturn.FAILURE:
+            self.pipeline.set_state(Gst.State.NULL)
+            raise RuntimeError(f"Failed to start GStreamer pipeline:\n{pipeline}")
 
     def read(self):
         sample = self.appsink.emit("try-pull-sample", 100_000_000)  # 0.1s
@@ -148,6 +187,37 @@ class GstCamera:
 
     def release(self):
         self.pipeline.set_state(Gst.State.NULL)
+
+
+def open_usb_camera(device="/dev/video0", width=1280, height=720, framerate=30, try_mjpeg_first=True):
+    pipelines = []
+    if try_mjpeg_first:
+        pipelines.append(usb_gstreamer_pipeline_mjpeg(device=device, width=width, height=height, framerate=framerate))
+        pipelines.append(usb_gstreamer_pipeline_raw(device=device, width=width, height=height, framerate=framerate))
+    else:
+        pipelines.append(usb_gstreamer_pipeline_raw(device=device, width=width, height=height, framerate=framerate))
+        pipelines.append(usb_gstreamer_pipeline_mjpeg(device=device, width=width, height=height, framerate=framerate))
+
+    last_error = None
+    for idx, pipeline in enumerate(pipelines, start=1):
+        try:
+            print(f"Trying USB webcam pipeline #{idx} for {device}...")
+            cam = GstCamera(pipeline)
+
+            # Probe a few frames to make sure the pipeline actually delivers
+            for _ in range(10):
+                ret, frame = cam.read()
+                if ret and frame is not None:
+                    print(f"USB webcam opened successfully with pipeline #{idx}.")
+                    print(pipeline)
+                    return cam
+
+            cam.release()
+            last_error = RuntimeError(f"Pipeline #{idx} started but produced no frames.")
+        except Exception as e:
+            last_error = e
+
+    raise RuntimeError(f"Could not open USB webcam {device}. Last error: {last_error}")
 
 
 # ============================================================
@@ -176,26 +246,40 @@ def load_model(ckpt_path: Path):
     return model
 
 
-def make_tracker(frame_rate=60):
+def make_tracker(frame_rate=30):
     return sv.ByteTrack(
         track_activation_threshold=0.25,
-        lost_track_buffer=120,
+        lost_track_buffer=60,
         minimum_matching_threshold=0.6,
         frame_rate=int(round(frame_rate)),
     )
 
 
-def open_camera(sensor_id: int, width: int, height: int, fps: int):
-    print(f"Opening camera {sensor_id}: {CAMERA_CONFIGS[sensor_id]['label']}")
-    return GstCamera(
-        gstreamer_pipeline(
-            sensor_id=sensor_id,
+def open_camera(camera_id: int, width: int, height: int, fps: int):
+    cfg = CAMERA_CONFIGS[camera_id]
+    print(f"Opening camera {camera_id}: {cfg['label']}")
+
+    if cfg["source_type"] == "usb":
+        return open_usb_camera(
+            device=cfg["usb_device"],
             width=width,
             height=height,
             framerate=fps,
-            flip_method=0,
+            try_mjpeg_first=cfg.get("usb_try_mjpeg_first", True),
         )
-    )
+
+    if cfg["source_type"] == "csi":
+        return GstCamera(
+            csi_gstreamer_pipeline(
+                sensor_id=cfg["sensor_id"],
+                width=width,
+                height=height,
+                framerate=fps,
+                flip_method=0,
+            )
+        )
+
+    raise ValueError(f"Unsupported source_type: {cfg['source_type']}")
 
 
 # ============================================================
@@ -547,9 +631,9 @@ def handle_events():
     return None
 
 
-def update_window_title(sensor_id: int, camera_speed_kmh: float):
-    cam_label = CAMERA_CONFIGS[sensor_id]["label"]
-    ckpt_name = CAMERA_CONFIGS[sensor_id]["ckpt"].name
+def update_window_title(camera_id: int, camera_speed_kmh: float):
+    cam_label = CAMERA_CONFIGS[camera_id]["label"]
+    ckpt_name = CAMERA_CONFIGS[camera_id]["ckpt"].name
     pygame.display.set_caption(
         f"RF-DETR + ByteTrack + Speed | {cam_label} | {ckpt_name} | camera speed={camera_speed_kmh:.2f} km/h"
     )
@@ -620,9 +704,9 @@ def prompt_camera_speed_kmh():
 # ============================================================
 # Global runtime objects
 # ============================================================
-current_sensor = 0
-model = load_model(CAMERA_CONFIGS[current_sensor]["ckpt"])
-tracker = make_tracker(frame_rate=60)
+current_camera = 0
+model = load_model(CAMERA_CONFIGS[current_camera]["ckpt"])
+tracker = make_tracker(frame_rate=FPS)
 
 track_meta = {}       # track_id -> (class_id, confidence)
 track_last_seen = {}  # track_id -> frame_idx
@@ -633,14 +717,13 @@ speed_state = reset_speed_state()
 # Main loop
 # ============================================================
 def run_live():
-    global current_sensor, model, tracker, track_meta, track_last_seen, speed_state
+    global current_camera, model, tracker, track_meta, track_last_seen, speed_state
 
-    W, H, FPS = 1280, 720, 60
     camera_speed_kmh = prompt_camera_speed_kmh()
 
-    cam = open_camera(current_sensor, W, H, FPS)
+    cam = open_camera(current_camera, W, H, FPS)
     screen = init_display(W, H)
-    update_window_title(current_sensor, camera_speed_kmh)
+    update_window_title(current_camera, camera_speed_kmh)
 
     try:
         font = ImageFont.truetype("DejaVuSans.ttf", 16)
@@ -650,8 +733,8 @@ def run_live():
         font_small = ImageFont.load_default()
 
     print("Camera opened. Press 'c' to switch cameras/models, 'q' to quit.")
-    print(f"Current camera: {CAMERA_CONFIGS[current_sensor]['label']}")
-    print(f"Current checkpoint: {CAMERA_CONFIGS[current_sensor]['ckpt']}")
+    print(f"Current camera: {CAMERA_CONFIGS[current_camera]['label']}")
+    print(f"Current checkpoint: {CAMERA_CONFIGS[current_camera]['ckpt']}")
     print(f"Assumed constant camera speed: {camera_speed_kmh:.2f} km/h")
 
     frame_idx = 0
@@ -668,25 +751,21 @@ def run_live():
             except Exception:
                 pass
 
-            # Toggle camera
-            current_sensor = 1 if current_sensor == 0 else 0
+            # Toggle between RGB USB camera and IR CSI camera
+            current_camera = 1 if current_camera == 0 else 0
 
-            # Reopen selected camera
-            cam = open_camera(current_sensor, W, H, FPS)
+            cam = open_camera(current_camera, W, H, FPS)
+            model = load_model(CAMERA_CONFIGS[current_camera]["ckpt"])
 
-            # Reload matching model/checkpoint
-            model = load_model(CAMERA_CONFIGS[current_sensor]["ckpt"])
-
-            # Reset tracker and per-track metadata so tracks don't leak across cameras
             tracker = make_tracker(frame_rate=FPS)
             track_meta.clear()
             track_last_seen.clear()
             speed_state = reset_speed_state()
 
-            update_window_title(current_sensor, camera_speed_kmh)
+            update_window_title(current_camera, camera_speed_kmh)
 
-            print(f"Switched to camera: {CAMERA_CONFIGS[current_sensor]['label']}")
-            print(f"Switched to checkpoint: {CAMERA_CONFIGS[current_sensor]['ckpt']}")
+            print(f"Switched to camera: {CAMERA_CONFIGS[current_camera]['label']}")
+            print(f"Switched to checkpoint: {CAMERA_CONFIGS[current_camera]['ckpt']}")
 
             # Small debounce / allow pipeline to settle
             time.sleep(0.2)
@@ -883,7 +962,7 @@ def run_live():
                 speed_world = speed_rel
 
             x1, y1, x2, y2 = box.astype(int).tolist()
-            cam_name = CAMERA_CONFIGS[current_sensor]["short_label"]
+            cam_name = CAMERA_CONFIGS[current_camera]["short_label"]
 
             text = f"[{cam_name}] ID {tid}: {label}"
             if speed_world is not None and np.isfinite(speed_world):
@@ -909,8 +988,8 @@ def run_live():
 
         # Extra status text
         status_lines = [
-            f"Mode: {CAMERA_CONFIGS[current_sensor]['label']}",
-            f"Model: {CAMERA_CONFIGS[current_sensor]['ckpt'].name}",
+            f"Mode: {CAMERA_CONFIGS[current_camera]['label']}",
+            f"Model: {CAMERA_CONFIGS[current_camera]['ckpt'].name}",
             f"Camera speed input: {camera_speed_kmh:.2f} km/h",
         ]
         y_text = H - 60
@@ -921,13 +1000,13 @@ def run_live():
         out_rgb = np.array(img, dtype=np.uint8)
 
         # FPS print
-        if frame_idx % 60 == 0 and frame_idx > 0:
+        if frame_idx % FPS == 0 and frame_idx > 0:
             elapsed = time.time() - t0
             fps_eff = frame_idx / max(elapsed, 1e-6)
             print(
                 f"Live FPS: ~{fps_eff:.2f} | detect every {DETECT_EVERY_N} | "
-                f"camera: {CAMERA_CONFIGS[current_sensor]['label']} | "
-                f"model: {CAMERA_CONFIGS[current_sensor]['ckpt'].name} | "
+                f"camera: {CAMERA_CONFIGS[current_camera]['label']} | "
+                f"model: {CAMERA_CONFIGS[current_camera]['ckpt'].name} | "
                 f"camera speed input: {camera_speed_kmh:.2f} km/h"
             )
 
