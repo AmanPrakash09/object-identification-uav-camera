@@ -21,8 +21,12 @@ import pygame
 # Config
 # -----------------------------
 SCRIPT_DIR = Path(__file__).resolve().parent
-CKPT_PATH = SCRIPT_DIR / "visdrone_rfdetr_nano_best_ema.pth"
-assert CKPT_PATH.exists(), f"Missing checkpoint: {CKPT_PATH}"
+
+RGB_CKPT_PATH = SCRIPT_DIR / "visdrone_rfdetr_nano_best_ema.pth"
+IR_CKPT_PATH = SCRIPT_DIR / "dronevehicle_rfdetr_nano_best_ema.pth"
+
+assert RGB_CKPT_PATH.exists(), f"Missing checkpoint: {RGB_CKPT_PATH}"
+assert IR_CKPT_PATH.exists(), f"Missing checkpoint: {IR_CKPT_PATH}"
 
 THRESHOLD = 0.30
 
@@ -255,17 +259,26 @@ print("CUDA available:", torch.cuda.is_available())
 if torch.cuda.is_available():
     print("GPU:", torch.cuda.get_device_name(0))
 print("Device:", device)
-print("Checkpoint:", CKPT_PATH)
 
-model = RFDETRNano(pretrain_weights=str(CKPT_PATH))
-model.model.model.to(device)
-model.model.model.eval()
 
-try:
-    model.optimize_for_inference()
-    print("Model optimized for inference.")
-except Exception:
-    pass
+def load_model(ckpt_path: Path):
+    print("Loading checkpoint:", ckpt_path)
+    model = RFDETRNano(pretrain_weights=str(ckpt_path))
+    model.model.model.to(device)
+    model.model.model.eval()
+
+    try:
+        model.optimize_for_inference()
+        print("Model optimized for inference.")
+    except Exception:
+        pass
+
+    return model
+
+
+current_mode = "RGB"
+current_ckpt_path = RGB_CKPT_PATH
+model = load_model(current_ckpt_path)
 
 
 # -----------------------------
@@ -309,6 +322,14 @@ tracker = build_tracker(frame_rate=FPS)
 track_meta = {}       # track_id -> (class_id, label, confidence)
 track_last_seen = {}  # track_id -> frame_idx
 track_histories = {}  # track_id -> history dict
+
+
+def reset_tracking_state():
+    global tracker, track_meta, track_last_seen, track_histories
+    tracker = build_tracker(frame_rate=FPS)
+    track_meta = {}
+    track_last_seen = {}
+    track_histories = {}
 
 
 # -----------------------------
@@ -558,19 +579,74 @@ def show_frame(screen, frame_rgb: np.ndarray):
     pygame.display.flip()
 
 
-def should_quit():
+def draw_overlay_message(frame_rgb: np.ndarray, message: str):
+    """
+    Draw a centered overlay message on top of the frame.
+    """
+    img = Image.fromarray(frame_rgb)
+    draw = ImageDraw.Draw(img)
+
+    try:
+        font = ImageFont.truetype("DejaVuSans.ttf", 36)
+    except Exception:
+        font = ImageFont.load_default()
+
+    bbox = draw.textbbox((0, 0), message, font=font)
+    tw = bbox[2] - bbox[0]
+    th = bbox[3] - bbox[1]
+
+    pad_x = 30
+    pad_y = 20
+    box_w = tw + 2 * pad_x
+    box_h = th + 2 * pad_y
+
+    x1 = (img.width - box_w) // 2
+    y1 = (img.height - box_h) // 2
+    x2 = x1 + box_w
+    y2 = y1 + box_h
+
+    # Dim the background slightly
+    overlay = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    overlay_draw = ImageDraw.Draw(overlay)
+    overlay_draw.rectangle([0, 0, img.width, img.height], fill=(0, 0, 0, 80))
+    overlay_draw.rounded_rectangle([x1, y1, x2, y2], radius=16, fill=(0, 0, 0, 180))
+    img = Image.alpha_composite(img.convert("RGBA"), overlay)
+
+    draw = ImageDraw.Draw(img)
+    draw.text(
+        (x1 + pad_x, y1 + pad_y),
+        message,
+        fill=(255, 255, 255),
+        font=font,
+    )
+
+    return np.array(img.convert("RGB"), dtype=np.uint8)
+
+
+def handle_events():
+    """
+    Returns:
+        "quit"   -> user requested quit
+        "toggle" -> user pressed c to switch model
+        None     -> no action
+    """
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
-            return True
-        if event.type == pygame.KEYDOWN and event.key == pygame.K_q:
-            return True
-    return False
+            return "quit"
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_q:
+                return "quit"
+            if event.key == pygame.K_c:
+                return "toggle"
+    return None
 
 
 # -----------------------------
 # Main loop
 # -----------------------------
 def run_live():
+    global model, current_mode, current_ckpt_path
+
     cam = open_usb_camera(device=USB_DEVICE, width=W, height=H, framerate=FPS)
     screen = init_display(W, H)
 
@@ -580,17 +656,47 @@ def run_live():
         font = ImageFont.load_default()
 
     print(f"USB camera opened on {USB_DEVICE}. Press 'q' to quit.")
+    print(f"Press 'c' to toggle between RGB and infrared models.")
+    print(f"Current mode: {current_mode}")
 
     frame_idx = 0
     t0 = time.time()
 
     try:
         while True:
-            if should_quit():
+            action = handle_events()
+            if action == "quit":
                 break
 
             ret, frame_rgb = cam.read()
             if not ret:
+                continue
+
+            # Handle model switching
+            if action == "toggle":
+                if current_mode == "RGB":
+                    next_mode = "Infrared"
+                    next_ckpt_path = IR_CKPT_PATH
+                    overlay_text = "switching to infrared"
+                else:
+                    next_mode = "RGB"
+                    next_ckpt_path = RGB_CKPT_PATH
+                    overlay_text = "switching to RGB"
+
+                # Pause inference and show overlay
+                paused_frame = draw_overlay_message(frame_rgb, overlay_text)
+                show_frame(screen, paused_frame)
+
+                print(f"Switching model: {current_mode} -> {next_mode}")
+                model = load_model(next_ckpt_path)
+                current_mode = next_mode
+                current_ckpt_path = next_ckpt_path
+
+                # Reset tracking and speed histories when switching models
+                reset_tracking_state()
+
+                print(f"Switched to {current_mode} model ({current_ckpt_path.name})")
+                # Resume normal loop on next frame
                 continue
 
             if frame_idx % DETECT_EVERY_N == 0:
@@ -618,6 +724,14 @@ def run_live():
 
             img = Image.fromarray(frame_rgb)
             draw = ImageDraw.Draw(img)
+
+            # Draw current mode at top-left
+            mode_text = f"Mode: {current_mode}"
+            bbox = draw.textbbox((0, 0), mode_text, font=font)
+            mw = bbox[2] - bbox[0]
+            mh = bbox[3] - bbox[1]
+            draw.rectangle([10, 10, 10 + mw + 6, 10 + mh + 4], fill=(255, 255, 0))
+            draw.text((13, 12), mode_text, fill=(0, 0, 0), font=font)
 
             boxes, ids = active_tracks_to_boxes_ids(tracker)
             for box, tid in zip(boxes, ids):
@@ -680,7 +794,9 @@ def run_live():
             if frame_idx % FPS == 0 and frame_idx > 0:
                 elapsed = time.time() - t0
                 fps_eff = frame_idx / max(elapsed, 1e-6)
-                print(f"Live FPS: ~{fps_eff:.2f} | detect every {DETECT_EVERY_N} frames")
+                print(
+                    f"Live FPS: ~{fps_eff:.2f} | detect every {DETECT_EVERY_N} frames | mode: {current_mode}"
+                )
 
             show_frame(screen, out_rgb)
             frame_idx += 1
