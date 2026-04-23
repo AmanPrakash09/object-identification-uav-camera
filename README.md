@@ -6,34 +6,58 @@ object-identification-uav-camera/
 │
 ├── README.md
 │
-└── phase-1/
-    │
-    ├── coco-env/
-    │   ├── Scripts/
-    │   └── Lib/
-    │
-    ├── coco-dataset/
-    │   └── coco-2017/
-    │       ├── raw/
-    │       ├── train/
-    │       │   ├── data/
-    │       │   └── labels.json
-    │       ├── validation/
-    │       │   ├── data/
-    │       │   └── labels.json
-    │       └── info.json
-    │
-    ├── get_coco_dataset.py
-    │
-    ├── opencv-evaluation/
-    │   ├── venv/
-    │   └── opencv_coco_benchmark.ipynb
-    │
-    ├── rfdetr-evaluation/
-    │   ├── venv/
-    │   └── rfdetr_coco_benchmark.ipynb
-    │
-    └── yolov12-evaluation/
-        ├── venv/
-        └── yolov12_coco_benchmark.ipynb
+phase-3/
+├── .gitignore
+├── README.md
+├── carla_vid_data/
+├── jetson-nano/
+└── rfdetr/
+    ├── README.md
+    ├── requirements.txt
+    ├── annotations/
+    ├── calibration/
+    ├── coco_annotations/
+    ├── exports/
+    ├── models/
+    │   ├── README.md
+    │   ├── basic-training/
+    │   │   ├── metadata.json
+    │   │   └── README.md
+    │   ├── enhanced-training/
+    │   │   ├── metadata.json
+    │   │   └── README.md
+    │   ├── infrared-training/
+    │   ├── infrared-training-isolated/
+    │   │   └── metadata.json
+    │   │   └── README.md
+    │   ├── infrared-training-smoke/
+    │   └── rgb-video-training/
+    ├── run_metadata/
+    ├── tracking-speed/
+    │   ├── .ipynb_checkpoints/
+    │   ├── README.md
+    │   ├── rfdetr_tracking_infrared.ipynb
+    │   ├── rfdetr_tracking_speed.ipynb
+    │   ├── rfdetr_tracking_speed_class_optimization.ipynb
+    │   ├── rfdetr_tracking_speed_improvements.ipynb
+    │   ├── rfdetr_tracking_speed_infrared.ipynb
+    │   └── rfdetr_tracking_speed_vector_additions.ipynb
+    ├── training/
+    │   ├── .ipynb_checkpoints/
+    │   ├── rfdetr_training_infrared.ipynb
+    │   ├── rfdetr_training_rgb.ipynb
+    │   ├── rfdetr_training_rgb_enhanced.ipynb
+    │   ├── google-cloud-vertex-ai/
+    │   │   ├── README.md
+    │   │   └── infrared/
+    │   │       ├── Dockerfile
+    │   │       ├── requirements.txt
+    │   │       └── trainer/
+    │   │           └── rfdetr_training_infrared.py
+    │   └── vm-remote-training/
+    │       ├── requirements.txt
+    │       ├── rfdetr_training_infrared_isolated.ipynb
+    │       └── rfdetr_training_rgb_video.ipynb
+    │       └── README.md
+    └── videos/
 ```
