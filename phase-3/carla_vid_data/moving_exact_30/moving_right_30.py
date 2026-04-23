@@ -1,17 +1,16 @@
-import glob
 import os
 import sys
 import math
 import json
+from pathlib import Path
 
-# Hunt down the pre-compiled CARLA library
-try:
-    sys.path.append(glob.glob('../../../../Downloads/CARLA_0.9.10/WindowsNoEditor/PythonAPI/carla/dist/carla-*%d.%d-%s.egg' % (
-        sys.version_info.major,
-        sys.version_info.minor,
-        'win-amd64' if os.name == 'nt' else 'linux-x86_64'))[0])
-except IndexError:
-    pass
+_REPO = Path(__file__).resolve().parent.parent
+if str(_REPO) not in sys.path:
+    sys.path.insert(0, str(_REPO))
+
+from carla_api_paths import ensure_carla_on_path
+
+ensure_carla_on_path()
 
 import carla
 import numpy as np
@@ -19,7 +18,7 @@ import cv2
 import queue
 
 # --- Configuration ---
-LOG_DIR = "_out_logs"
+LOG_DIR = os.path.join("outputs", "legacy")
 RGB_DIR = os.path.join(LOG_DIR, "rgb")
 LABELED_DIR = os.path.join(LOG_DIR, "labeled")
 IMAGE_WIDTH = 800
