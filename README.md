@@ -11,6 +11,13 @@ phase-3/
 ├── README.md
 ├── carla_vid_data/
 ├── jetson-nano/
+    ├── README.md
+    ├── det_track_only_usb.py
+    ├── det_track_still_camera_speed_estimations.py
+    ├── det_track_still_camera_speed_multi_model.py
+    ├── requirements.txt
+    ├── trained_rfdetr_live_inference.py
+    └── trained_rfdetr_live_inference_usb.py
 └── rfdetr/
     ├── README.md
     ├── requirements.txt
