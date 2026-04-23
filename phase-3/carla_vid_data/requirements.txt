@@ -1,4 +1,6 @@
-numpy
-opencv-python
-pygame
-carla
+# Python 3.7.x required (CARLA 0.9.10 client .egg matches 3.7).
+# Install the CARLA API separately: use carla_api_paths / config, not pip install carla.
+
+numpy>=1.18.0,<1.20.0
+opencv-python-headless>=4.2.0,<4.6.0
+pygame>=2.0.1,<2.2.0

@@ -1,17 +1,11 @@
-import glob
 import os
 import sys
 import math
 import json
 
-# Hunt down the pre-compiled CARLA library
-try:
-    sys.path.append(glob.glob('../../../../Downloads/CARLA_0.9.10/WindowsNoEditor/PythonAPI/carla/dist/carla-*%d.%d-%s.egg' % (
-        sys.version_info.major,
-        sys.version_info.minor,
-        'win-amd64' if os.name == 'nt' else 'linux-x86_64'))[0])
-except IndexError:
-    pass
+from carla_api_paths import ensure_carla_on_path
+
+ensure_carla_on_path()
 
 import carla
 import numpy as np
@@ -21,7 +15,7 @@ import pygame
 from pygame.locals import K_w, K_a, K_s, K_d, K_SPACE, K_ESCAPE
 
 # --- Configuration ---
-LOG_DIR = "_out_logs"
+LOG_DIR = os.path.join("outputs", "legacy")
 RGB_DIR = os.path.join(LOG_DIR, "rgb")
 LABELED_DIR = os.path.join(LOG_DIR, "labeled")
 IMAGE_WIDTH = 800
@@ -46,9 +40,9 @@ def get_image_point(loc, K, w2c):
         point_2d = np.array([point_2d[0] / point_2d[2], point_2d[1] / point_2d[2], point_2d[2]])
     return point_2d
 
-def get_bbox_and_draw(image, vehicle, camera, K):
-    bounding_box = vehicle.bounding_box
-    transform = vehicle.get_transform()
+def get_bbox_and_draw(image, actor, camera, K):
+    bounding_box = actor.bounding_box
+    transform = actor.get_transform()
     w2c = np.array(camera.get_transform().get_inverse_matrix())
     
     verts = [loc for loc in bounding_box.get_world_vertices(transform)]
@@ -72,7 +66,7 @@ def get_bbox_and_draw(image, vehicle, camera, K):
         
         if width > 0 and height > 0:
             cv2.rectangle(image, (x_min, y_min), (x_max, y_max), (0, 255, 0), 2)
-            cv2.putText(image, 'Car', (x_min, max(15, y_min - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+            cv2.putText(image, 'Truck', (x_min, max(15, y_min - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
             return image, [int(x_min), int(y_min), int(width), int(height)]
             
     return image, None
@@ -92,25 +86,23 @@ def main():
     coco_data = {
         "images": [],
         "annotations": [],
-        "categories": [{"id": 1, "name": "car", "supercategory": "vehicle"}]
+        "categories": [{"id": 1, "name": "truck", "supercategory": "vehicle"}]
     }
     annotation_id = 1
     
-    # We will store speeds here to build the video later
     speed_history = []
 
     client = carla.Client('localhost', 2000)
     client.set_timeout(5.0)
     world = client.get_world()
 
-
     custom_weather = world.get_weather()
-    # 90.0 is high noon, 15.0 is golden hour/sunset, -90.0 is pitch black midnight
     custom_weather.sun_altitude_angle = 83.0 
-    custom_weather.cloudiness = 29.0       # 0 to 100
-    custom_weather.precipitation = 0.0   # 0 to 100 (Rain!)
-    custom_weather.fog_density = 2.0      # 0 to 100
+    custom_weather.cloudiness = 87.0       
+    custom_weather.precipitation = 0.0   
+    custom_weather.fog_density = 2.0      
     world.set_weather(custom_weather)
+    
     actor_list = []
     speed_log_file = None
 
@@ -126,34 +118,45 @@ def main():
 
         blueprint_library = world.get_blueprint_library()
 
-        # Spawn Vehicle
-        vehicle_bp = blueprint_library.filter('vehicle.tesla.model3')[0]
+        # --- SPAWN TRUCK ---
+        vehicle_bp = blueprint_library.filter('vehicle.carlamotors.carlacola')[0] 
         spawn_point = world.get_map().get_spawn_points()[0]
+        spawn_point.location.z += 1.0 
+        
         vehicle = world.spawn_actor(vehicle_bp, spawn_point)
         actor_list.append(vehicle)
-# Multiply by 2 because 'extent' is only half the size!
+
         bbox = vehicle.bounding_box
-        car_length = bbox.extent.x * 2.0
-        car_width = bbox.extent.y * 2.0
-        car_height = bbox.extent.z * 2.0
+        vehicle_length = bbox.extent.x * 2.0
+        vehicle_width = bbox.extent.y * 2.0
+        vehicle_height = bbox.extent.z * 2.0
         
-        print(f"\n--- VEHICLE SPECS ---")
-        print(f"Length: {car_length:.2f} meters")
-        print(f"Width:  {car_width:.2f} meters")
-        print(f"Height: {car_height:.2f} meters")
+        print(f"\n--- ACTOR SPECS ---")
+        print(f"Actor: Truck")
+        print(f"Length: {vehicle_length:.2f} meters")
+        print(f"Width:  {vehicle_width:.2f} meters")
+        print(f"Height: {vehicle_height:.2f} meters")
         print(f"---------------------\n")
         
         spectator = world.get_spectator()
 
-        # Spawn Recording Camera
+        # --- SPAWN RECORDING CAMERA (Angled Offset) ---
         camera_bp = blueprint_library.find('sensor.camera.rgb')
         camera_bp.set_attribute('image_size_x', str(IMAGE_WIDTH))
         camera_bp.set_attribute('image_size_y', str(IMAGE_HEIGHT))
         camera_bp.set_attribute('fov', str(FOV))
 
         camera_transform = carla.Transform(
-            carla.Location(x=spawn_point.location.x, y=spawn_point.location.y, z=spawn_point.location.z + 25.0),
-            carla.Rotation(pitch=-90.0) 
+            carla.Location(
+                x=spawn_point.location.x - 2.0,  
+                y=spawn_point.location.y - 2.0,  
+                z=spawn_point.location.z + 25.0   
+            ),
+            carla.Rotation(
+                pitch=-70.0, 
+                yaw=50.0,    
+                roll=0.0
+            ) 
         )
         camera = world.spawn_actor(camera_bp, camera_transform)
         actor_list.append(camera)
@@ -170,7 +173,7 @@ def main():
         while running:
             world.tick()
             
-            # --- PYGAME KEYBOARD CONTROL ---
+            # --- PYGAME KEYBOARD CONTROL FOR TRUCK ---
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
@@ -178,19 +181,23 @@ def main():
                     running = False
                     
             keys = pygame.key.get_pressed()
+            
+            # Vehicles use mechanical inputs (throttle, steer, brake)
             control = carla.VehicleControl()
             control.throttle = 1.0 if keys[K_w] else 0.0
             control.steer = -0.5 if keys[K_a] else (0.5 if keys[K_d] else 0.0)
             control.brake = 1.0 if keys[K_SPACE] else 0.0
             control.reverse = bool(keys[K_s])
-            if keys[K_s]: control.throttle = 1.0 
+            if keys[K_s]: 
+                control.throttle = 1.0 
                 
             vehicle.apply_control(control)
 
-            # --- SPECTATOR FOLLOWS CAR ---
-            car_transform = vehicle.get_transform()
-            spectator_offset = -10.0 * car_transform.rotation.get_forward_vector() + carla.Location(z=5.0)
-            spectator_transform = carla.Transform(car_transform.location + spectator_offset, car_transform.rotation)
+            # --- SPECTATOR FOLLOWS TRUCK ---
+            # Pulled the spectator camera back to -15.0m so you can see the whole truck
+            vehicle_transform = vehicle.get_transform()
+            spectator_offset = -15.0 * vehicle_transform.rotation.get_forward_vector() + carla.Location(z=6.0)
+            spectator_transform = carla.Transform(vehicle_transform.location + spectator_offset, vehicle_transform.rotation)
             spectator_transform.rotation.pitch -= 15.0 
             spectator.set_transform(spectator_transform)
 
@@ -217,7 +224,6 @@ def main():
             speed_kmh = speed_ms * 3.6
             speed_log_file.write(f"{frame_num},{speed_kmh:.2f}\n")
             
-            # Store speed for the video generation later
             speed_history.append(speed_kmh)
             
             # --- PYGAME DISPLAY ---
@@ -253,7 +259,6 @@ def main():
             print(f"Compiling {frame_num} frames into MP4 video. This might take a few seconds...")
             video_path = os.path.join(LOG_DIR, "telemetry_replay.mp4")
             
-            # 20.0 FPS matches our fixed_delta_seconds of 0.05
             fourcc = cv2.VideoWriter_fourcc(*'mp4v') 
             out_video = cv2.VideoWriter(video_path, fourcc, 20.0, (IMAGE_WIDTH, IMAGE_HEIGHT))
             
@@ -264,15 +269,11 @@ def main():
                 if os.path.exists(img_path):
                     frame = cv2.imread(img_path)
                     
-                    # Format the speed text
                     text = f"{speed_history[i]:.1f} km/h"
-                    
-                    # Calculate position for bottom right corner
                     text_size = cv2.getTextSize(text, cv2_font, 1, 2)[0]
                     text_x = IMAGE_WIDTH - text_size[0] - 20
                     text_y = IMAGE_HEIGHT - 20
                     
-                    # Draw a black outline for readability, then white text over it
                     cv2.putText(frame, text, (text_x, text_y), cv2_font, 1, (0, 0, 0), 4)
                     cv2.putText(frame, text, (text_x, text_y), cv2_font, 1, (255, 255, 255), 2)
                     
